@@ -67,6 +67,12 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .component-table th:nth-child(3) { width: 18%; }
 .component-table th:nth-child(4) { width: 20%; }
 .component-table th:nth-child(5) { width: 18%; }
+.component-table:not(.compact-table):not(.optimization-table) th:nth-child(1) { width: 20%; }
+.component-table:not(.compact-table):not(.optimization-table) th:nth-child(2) { width: 14%; }
+.component-table:not(.compact-table):not(.optimization-table) th:nth-child(3) { width: 13%; }
+.component-table:not(.compact-table):not(.optimization-table) th:nth-child(4) { width: 16%; }
+.component-table:not(.compact-table):not(.optimization-table) th:nth-child(5) { width: 16%; }
+.component-table:not(.compact-table):not(.optimization-table) th:nth-child(6) { width: 16%; }
 .component-table th:last-child { width: 32px; }
 .compact-table th:nth-child(1) { width: 35%; }
 .compact-table th:nth-child(2) { width: 30%; }
@@ -81,6 +87,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 input, select { min-height: 34px; padding: 7px 9px; font-size: 12px; }
 input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px #2465d51a; }
 input::placeholder { color: #adb8c6; }
+input:focus::placeholder { color: transparent; }
 .input-with-suffix { position: relative; min-width: 0; }
 .input-with-suffix.has-suffix input { padding-right: 48px; }
 .input-with-suffix.has-suffix > span { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); color: #96a3b3; font-size: 10px; pointer-events: none; white-space: nowrap; }
@@ -259,13 +266,15 @@ input::placeholder { color: #adb8c6; }
   .component-table, .component-table tbody, .component-table tr, .component-table td { display: block; width: 100%; }
   .component-table thead { display: none; }
   .component-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 10px; margin-bottom: 10px; padding: 12px 10px; border: 1px solid var(--line); border-radius: 7px; background: #fbfcfe; }
-  .component-table td { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 8px; align-items: center; padding: 0; border: 0; }
+  .component-table td { display: grid; grid-template-columns: 55px minmax(0, 1fr); gap: 6px; align-items: center; padding: 0; border: 0; }
   .component-table td::before { content: attr(data-label); color: #71839a; font-size: 10px; font-weight: 700; }
   .component-table td.action-cell { display: block; position: absolute; right: 7px; top: 7px; width: 25px; }
   .component-table tr { position: relative; }
   .component-table td.action-cell::before { display: none; }
   .component-table td.numeric-cell { display: grid; grid-column: 1 / -1; }
   .component-table td.numeric-cell::before { content: attr(data-label); }
+  .input-with-suffix.has-suffix input { padding-right: 40px; }
+  .input-with-suffix.has-suffix > span { right: 6px; font-size: 9px; }
   .optimization-table .component-table tr { grid-template-columns: 1fr; }
   .optimization-table .component-table td { grid-template-columns: 84px minmax(0, 1fr); }
   .compact-table .component-table tr { grid-template-columns: 1fr; }

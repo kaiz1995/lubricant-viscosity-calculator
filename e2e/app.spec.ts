@@ -29,7 +29,43 @@ function input(page: Page, name: string) {
   return page.getByLabel(name, { exact: true })
 }
 
+async function fillIfBlank(page: Page, name: string, value: string) {
+  const field = input(page, name)
+  if (await field.inputValue() === '') await field.fill(value)
+}
+
+async function fillForwardExample(page: Page) {
+  const values = [
+    ['第1行原料名称', '高粘基础油'], ['第1行运动粘度', '100'], ['第1行质量分数', '25'], ['第1行价格', '8.20'],
+    ['第2行原料名称', '中粘基础油'], ['第2行运动粘度', '46'], ['第2行质量分数', '50'], ['第2行价格', '5.60'],
+    ['第3行原料名称', '低粘基础油'], ['第3行运动粘度', '10'], ['第3行质量分数', '25'], ['第3行价格', '3.80'],
+  ] as const
+  for (const [name, value] of values) await fillIfBlank(page, name, value)
+}
+
+async function fillReverseExample(page: Page) {
+  const values = [
+    ['第1行运动粘度', '10'], ['第2行运动粘度', '50'], ['第3行运动粘度', '100'], ['锁定比例', '20'],
+  ] as const
+  for (const [name, value] of values) await fillIfBlank(page, name, value)
+}
+
+async function fillOptimizationExample(page: Page) {
+  const values = [
+    ['第1行组分名称', '组分 A'], ['第1行运动粘度', '10'], ['第1行价格', '3.80'], ['第1行最小比例', '0'], ['第1行最大比例', '100'],
+    ['第2行组分名称', '组分 B'], ['第2行运动粘度', '50'], ['第2行价格', '5.60'], ['第2行最小比例', '0'], ['第2行最大比例', '100'],
+    ['第3行组分名称', '组分 C'], ['第3行运动粘度', '100'], ['第3行价格', '8.20'], ['第3行最小比例', '0'], ['第3行最大比例', '100'],
+  ] as const
+  for (const [name, value] of values) await fillIfBlank(page, name, value)
+  if (await input(page, '精确目标粘度').count()) await fillIfBlank(page, '精确目标粘度', '46')
+  if (await input(page, '目标粘度下限').count()) await fillIfBlank(page, '目标粘度下限', '40')
+  if (await input(page, '目标粘度上限').count()) await fillIfBlank(page, '目标粘度上限', '52')
+  if (await input(page, '目标中心粘度').count()) await fillIfBlank(page, '目标中心粘度', '46')
+  if (await input(page, '目标允许偏差').count()) await fillIfBlank(page, '目标允许偏差', '6')
+}
+
 async function calculateForward(page: Page) {
+  await fillForwardExample(page)
   await page.getByRole('button', { name: /计算调和粘度/ }).click()
   await expect(page.getByText('CALCULATED')).toBeVisible()
 }
@@ -48,6 +84,7 @@ async function saveSecondForward(page: Page, name: string) {
 }
 
 async function saveOptimization(page: Page, name: string) {
+  await fillOptimizationExample(page)
   await page.getByRole('button', { name: /寻找最低成本方案/ }).click()
   await expect(page.getByText('OPTIMAL')).toBeVisible()
   page.once('dialog', (dialog) => dialog.accept(name))
@@ -112,6 +149,7 @@ test('正算结果', async ({ page }) => {
 
 test('反求成功', async ({ page }) => {
   await page.getByRole('button', { name: /目标粘度.*配比/ }).click()
+  await fillReverseExample(page)
   await input(page, '目标运动粘度').fill('46')
   await page.getByRole('button', { name: /解析反求配比/ }).click()
   await expect(page.getByText('找到可行配方')).toBeVisible()
@@ -120,6 +158,7 @@ test('反求成功', async ({ page }) => {
 
 test('反求不可达错误', async ({ page }) => {
   await page.getByRole('button', { name: /目标粘度.*配比/ }).click()
+  await fillReverseExample(page)
   await input(page, '目标运动粘度').fill('100')
   await page.getByRole('button', { name: /解析反求配比/ }).click()
   await expect(page.getByText('当前条件无解')).toBeVisible()
@@ -128,6 +167,7 @@ test('反求不可达错误', async ({ page }) => {
 
 test('优化成功并显示成本', async ({ page }) => {
   await page.getByRole('button', { name: /最低成本优化/ }).click()
+  await fillOptimizationExample(page)
   await page.getByRole('button', { name: /寻找最低成本方案/ }).click()
   await expect(page.getByText('OPTIMAL')).toBeVisible()
   await expect(page.getByText('最低成本', { exact: true })).toBeVisible()
@@ -292,6 +332,7 @@ test('PAO类别最低比例50%的优化成功', async ({ page }) => {
 
 test('不可行类别约束显示明确诊断', async ({ page }) => {
   await page.getByRole('button', { name: /最低成本优化/ }).click()
+  await fillOptimizationExample(page)
   await input(page, '第1行组分类别').selectOption('PAO')
   await input(page, '第2行组分类别').selectOption('PAO')
   await input(page, '第1行最大比例').fill('20')
@@ -305,6 +346,7 @@ test('不可行类别约束显示明确诊断', async ({ page }) => {
 
 test('类别粘度与原料上下限联合优化成功', async ({ page }) => {
   await page.getByRole('button', { name: /最低成本优化/ }).click()
+  await fillOptimizationExample(page)
   await input(page, '第1行组分类别').selectOption('PAO')
   await input(page, '第2行组分类别').selectOption('PAO')
   await input(page, '第3行组分类别').selectOption('AN')
