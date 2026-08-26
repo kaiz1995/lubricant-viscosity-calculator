@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+outputs/
+.claude/
+test-results/
+playwright-report/
+blob-report/
+.playwright-mcp/
+*.local
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+ui-forward.png
