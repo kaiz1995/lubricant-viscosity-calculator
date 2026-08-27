@@ -428,7 +428,7 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
                     </td>
                     <td data-label="类别" className="advanced-cell"><CategorySelect value={row.category} onChange={(value) => updateRow(index, 'category', value)} ariaLabel={`第${index + 1}行原料类别`} /></td>
                     <td data-label="KV40">
-                      <TextInput value={row.viscosity} onChange={(value) => updateRow(index, 'viscosity', value)} placeholder={`${[100, 46, 10][index] ?? 46}`} min={0.3000001} ariaLabel={`第${index + 1}行运动粘度`} />
+                      <TextInput value={row.viscosity} onChange={(value) => updateRow(index, 'viscosity', value)} placeholder={`${[100, 46, 10][index] ?? 46}`} min={0.2000001} ariaLabel={`第${index + 1}行运动粘度`} />
                     </td>
                     <td data-label="质量分数">
                       <TextInput value={row.fraction} onChange={(value) => updateRow(index, 'fraction', value)} placeholder={`${[25, 50, 25][index] ?? 0}`} min={0} max={100} suffix="%" ariaLabel={`第${index + 1}行质量分数`} />
@@ -507,7 +507,10 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
 function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; onSave: SaveRecipe }) {
   const [rows, setRows] = useState<ReverseRow[]>(() => initialRecipe?.mode === 'reverse' ? reverseRowsFromRecipe(initialRecipe) : initialReverseRows)
   const [target, setTarget] = useState(() => initialRecipe?.mode === 'reverse' ? inputNumber(initialRecipe.targetViscosity) : '')
-  const [lockedIndex, setLockedIndex] = useState(() => initialRecipe?.mode === 'reverse' ? initialRecipe.lockedIndex ?? 0 : 0)
+  const [lockedIndex, setLockedIndex] = useState<0 | 1 | 2 | ''>(() => {
+    const savedIndex = initialRecipe?.mode === 'reverse' ? initialRecipe.lockedIndex : null
+    return savedIndex === 0 || savedIndex === 1 || savedIndex === 2 ? savedIndex : ''
+  })
   const [lockedFraction, setLockedFraction] = useState(() => initialRecipe?.mode === 'reverse' ? `${(initialRecipe.lockedFraction ?? 0.2) * 100}` : '')
   const [result, setResult] = useState<ReverseBlendResult | null>(null)
   const [error, setError] = useState('')
@@ -520,11 +523,12 @@ function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
 
   function calculate() {
     try {
+      if (lockedIndex === '') throw new Error('请选择锁定组分。')
       const viscosities = rows.map((row, index) => parseValue(row.viscosity, `第${index + 1}行运动粘度`)) as [number, number, number]
       const reverseResult = reverseBlend(model, {
         viscosities,
         targetViscosity: parseValue(target, '目标粘度'),
-        lockedIndex: lockedIndex as 0 | 1 | 2,
+        lockedIndex,
         lockedFraction: parseValue(lockedFraction, '锁定比例') / 100,
       })
       setResult(reverseResult)
@@ -536,7 +540,7 @@ function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
   }
 
   function saveCurrentResult() {
-    if (!result || result.status !== 'SUCCESS') return
+    if (!result || result.status !== 'SUCCESS' || lockedIndex === '') return
     onSave(createRecipe({
       name: defaultRecipeName(),
       mode: 'reverse',
@@ -553,7 +557,7 @@ function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
       categoryConstraints: [],
       targetViscosity: Number(target),
       targetTolerance: null,
-      lockedIndex: lockedIndex as 0 | 1 | 2,
+      lockedIndex,
       lockedFraction: Number(lockedFraction) / 100,
       optimizationConstraints: null,
       blendViscosity: result.blendViscosity,
@@ -563,7 +567,7 @@ function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
     }))
   }
 
-  const lockedName = rows[lockedIndex]?.name ?? '锁定组分'
+  const lockedName = lockedIndex === '' ? '锁定组分' : rows[lockedIndex]?.name || `组分 ${lockedIndex + 1}`
 
   return (
     <div className="tab-layout">
@@ -571,10 +575,11 @@ function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
         <SectionHeading eyebrow="02 / REVERSE SOLVER" title="目标粘度 → 配比" description="固定一个组分及其比例，用解析解反求另外两个组分的比例。" />
         <div className="locked-config">
           <Field label="目标 KV40" hint="mm²/s">
-            <TextInput value={target} onChange={(value) => { setTarget(value); setResult(null) }} placeholder="46" min={0.3000001} ariaLabel="目标运动粘度" />
+            <TextInput value={target} onChange={(value) => { setTarget(value); setResult(null) }} placeholder="46" min={0.2000001} ariaLabel="目标运动粘度" />
           </Field>
           <Field label="锁定组分">
-            <select value={lockedIndex} onChange={(event) => { setLockedIndex(Number(event.target.value) as 0 | 1 | 2); setResult(null) }} aria-label="锁定组分">
+            <select value={lockedIndex} onChange={(event) => { setLockedIndex(event.target.value === '' ? '' : Number(event.target.value) as 0 | 1 | 2); setResult(null) }} aria-label="锁定组分">
+              <option value="" disabled>请选择锁定组分</option>
               {rows.map((row, index) => <option value={index} key={index}>{row.name || `组分 ${index + 1}`}</option>)}
             </select>
           </Field>
@@ -590,7 +595,7 @@ function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
                 <tr key={index}>
                   <td data-label="组分"><input className="name-input" value={row.name} onChange={(event) => setRows((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} placeholder={`如 组分 ${String.fromCharCode(65 + index)}`} aria-label={`第${index + 1}行组分名称`} /></td>
                   <td data-label="类别"><CategorySelect value={row.category} onChange={(value) => setRows((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, category: value } : item))} ariaLabel={`第${index + 1}行组分类别`} /></td>
-                  <td data-label="KV40"><TextInput value={row.viscosity} onChange={(value) => updateRow(index, value)} placeholder={`${[10, 50, 100][index]}`} min={0.3000001} ariaLabel={`第${index + 1}行运动粘度`} /></td>
+                  <td data-label="KV40"><TextInput value={row.viscosity} onChange={(value) => updateRow(index, value)} placeholder={`${[10, 50, 100][index]}`} min={0.2000001} ariaLabel={`第${index + 1}行运动粘度`} /></td>
                   <td data-label="状态">{index === lockedIndex ? <span className="lock-chip">锁定 {lockedFraction || '—'}%</span> : <span className="muted">待反求</span>}</td>
                 </tr>
               ))}
@@ -772,12 +777,12 @@ function OptimizationTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | n
 
   const targetInputs = targetMode === 'exact' ? (
     <Field label="目标 KV40" hint="精确值">
-      <TextInput value={exactTarget} onChange={(value) => { setExactTarget(value); clearOptimizationResult() }} placeholder="46" min={0.3000001} ariaLabel="精确目标粘度" />
+      <TextInput value={exactTarget} onChange={(value) => { setExactTarget(value); clearOptimizationResult() }} placeholder="46" min={0.2000001} ariaLabel="精确目标粘度" />
     </Field>
   ) : targetMode === 'range' ? (
-    <><Field label="目标下限" hint="mm²/s"><TextInput value={rangeMin} onChange={(value) => { setRangeMin(value); clearOptimizationResult() }} placeholder="40" min={0.3000001} ariaLabel="目标粘度下限" /></Field><Field label="目标上限" hint="mm²/s"><TextInput value={rangeMax} onChange={(value) => { setRangeMax(value); clearOptimizationResult() }} placeholder="52" min={0.3000001} ariaLabel="目标粘度上限" /></Field></>
+    <><Field label="目标下限" hint="mm²/s"><TextInput value={rangeMin} onChange={(value) => { setRangeMin(value); clearOptimizationResult() }} placeholder="40" min={0.2000001} ariaLabel="目标粘度下限" /></Field><Field label="目标上限" hint="mm²/s"><TextInput value={rangeMax} onChange={(value) => { setRangeMax(value); clearOptimizationResult() }} placeholder="52" min={0.2000001} ariaLabel="目标粘度上限" /></Field></>
   ) : (
-    <><Field label="目标中心" hint="mm²/s"><TextInput value={toleranceCenter} onChange={(value) => { setToleranceCenter(value); clearOptimizationResult() }} placeholder="46" min={0.3000001} ariaLabel="目标中心粘度" /></Field><Field label="允许偏差" hint="± mm²/s"><TextInput value={tolerance} onChange={(value) => { setTolerance(value); clearOptimizationResult() }} placeholder="6" min={0} ariaLabel="目标允许偏差" /></Field></>
+    <><Field label="目标中心" hint="mm²/s"><TextInput value={toleranceCenter} onChange={(value) => { setToleranceCenter(value); clearOptimizationResult() }} placeholder="46" min={0.2000001} ariaLabel="目标中心粘度" /></Field><Field label="允许偏差" hint="± mm²/s"><TextInput value={tolerance} onChange={(value) => { setTolerance(value); clearOptimizationResult() }} placeholder="6" min={0} ariaLabel="目标允许偏差" /></Field></>
   )
 
   return (
@@ -787,7 +792,7 @@ function OptimizationTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | n
         <div className="table-shell optimization-table">
           <table className="component-table">
             <thead><tr><th scope="col">组分</th><th scope="col">类别</th><th scope="col">KV40 <small>mm²/s</small></th><th scope="col">价格 <small>元/kg</small></th><th scope="col">最小比例</th><th scope="col">最大比例</th></tr></thead>
-            <tbody>{rows.map((row, index) => <tr key={index}><td data-label="组分"><input className="name-input" value={row.name} onChange={(event) => updateRow(index, 'name', event.target.value)} placeholder={`如 组分 ${String.fromCharCode(65 + index)}`} aria-label={`第${index + 1}行组分名称`} /></td><td data-label="类别"><CategorySelect value={row.category} onChange={(value) => updateRow(index, 'category', value)} ariaLabel={`第${index + 1}行组分类别`} /></td><td data-label="KV40"><TextInput value={row.viscosity} onChange={(value) => updateRow(index, 'viscosity', value)} placeholder={`${[10, 50, 100][index]}`} min={0.3000001} ariaLabel={`第${index + 1}行运动粘度`} /></td><td data-label="价格"><TextInput value={row.price} onChange={(value) => updateRow(index, 'price', value)} placeholder={`${[3.8, 5.6, 8.2][index]}`} min={0} suffix="元/kg" ariaLabel={`第${index + 1}行价格`} /></td><td data-label="最小比例"><TextInput value={row.minFraction} onChange={(value) => updateRow(index, 'minFraction', value)} placeholder="0" min={0} max={100} suffix="%" ariaLabel={`第${index + 1}行最小比例`} /></td><td data-label="最大比例"><TextInput value={row.maxFraction} onChange={(value) => updateRow(index, 'maxFraction', value)} placeholder="100" min={0} max={100} suffix="%" ariaLabel={`第${index + 1}行最大比例`} /></td></tr>)}</tbody>
+            <tbody>{rows.map((row, index) => <tr key={index}><td data-label="组分"><input className="name-input" value={row.name} onChange={(event) => updateRow(index, 'name', event.target.value)} placeholder={`如 组分 ${String.fromCharCode(65 + index)}`} aria-label={`第${index + 1}行组分名称`} /></td><td data-label="类别"><CategorySelect value={row.category} onChange={(value) => updateRow(index, 'category', value)} ariaLabel={`第${index + 1}行组分类别`} /></td><td data-label="KV40"><TextInput value={row.viscosity} onChange={(value) => updateRow(index, 'viscosity', value)} placeholder={`${[10, 50, 100][index]}`} min={0.2000001} ariaLabel={`第${index + 1}行运动粘度`} /></td><td data-label="价格"><TextInput value={row.price} onChange={(value) => updateRow(index, 'price', value)} placeholder={`${[3.8, 5.6, 8.2][index]}`} min={0} suffix="元/kg" ariaLabel={`第${index + 1}行价格`} /></td><td data-label="最小比例"><TextInput value={row.minFraction} onChange={(value) => updateRow(index, 'minFraction', value)} placeholder="0" min={0} max={100} suffix="%" ariaLabel={`第${index + 1}行最小比例`} /></td><td data-label="最大比例"><TextInput value={row.maxFraction} onChange={(value) => updateRow(index, 'maxFraction', value)} placeholder="100" min={0} max={100} suffix="%" ariaLabel={`第${index + 1}行最大比例`} /></td></tr>)}</tbody>
           </table>
         </div>
         <div className="category-constraints">

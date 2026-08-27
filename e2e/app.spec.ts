@@ -52,6 +52,7 @@ async function fillReverseExample(page: Page) {
     ['第1行运动粘度', '10'], ['第2行运动粘度', '50'], ['第3行运动粘度', '100'], ['锁定比例', '20'],
   ] as const
   for (const [name, value] of values) await fillIfBlank(page, name, value)
+  await page.getByLabel('锁定组分').selectOption('0')
 }
 
 async function fillOptimizationExample(page: Page) {
@@ -153,6 +154,7 @@ test('正算结果', async ({ page }) => {
 
 test('反求成功', async ({ page }) => {
   await page.getByRole('button', { name: /目标粘度.*配比/ }).click()
+  await expect(page.getByLabel('锁定组分')).toHaveValue('')
   await fillReverseExample(page)
   await input(page, '目标运动粘度').fill('46')
   await page.getByRole('button', { name: /解析反求配比/ }).click()

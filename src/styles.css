@@ -312,12 +312,14 @@ input:focus::placeholder { color: transparent; }
 :root { --navy: #29313d; --blue: #16806f; --blue-soft: #e9f7f3; --green: #16806f; --green-soft: #e9f7f3; --amber: #9a631d; --amber-soft: #fff6e6; --line: #dfe2e5; --muted: #6e7781; --surface: #fff; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color: var(--navy); background: #fafaf8; }
 body { background: #fafaf8; }
 .app-shell { width: min(1440px, 100%); padding: 28px clamp(18px, 5vw, 72px) 36px; }
-.app-header { gap: 14px; padding-bottom: 18px; }
-.brand-logo { flex-basis: 52px; width: 52px; height: 52px; border-radius: 0; }
+.app-header { gap: 18px; padding-bottom: 22px; }
+.brand-logo { flex-basis: 58px; width: 58px; height: 58px; border-radius: 0; }
+.brand-copy { display: flex; flex-direction: column; justify-content: center; min-height: 58px; padding-left: 18px; border-left: 1px solid var(--line); }
 .brand-copy h1, .section-heading h2, .result-heading h3, .workspace-heading h2, .workspace-heading h3 { font-family: "Noto Serif SC", "Source Han Serif SC", Georgia, serif; }
 .brand-copy h1 { font-size: clamp(25px, 3vw, 34px); letter-spacing: -.055em; }
-.brand-copy > span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
 .kicker, .eyebrow { color: var(--blue); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; letter-spacing: .12em; }
+.brand-copy .kicker { margin-bottom: 8px; line-height: 1; }
+.brand-copy h1 { line-height: 1; }
 .model-chip, .version-chip { border-color: var(--line); color: var(--muted); background: var(--surface); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: 600; letter-spacing: .04em; }
 .version-chip { color: var(--muted); background: var(--surface); }
 .assumption-panel { margin: 0 0 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
@@ -329,10 +331,10 @@ body { background: #fafaf8; }
 .tabs button.active { border: 0; color: #fff; background: var(--blue); box-shadow: 0 4px 10px #16806f29; }
 .tabs button strong { font-size: 13px; }
 .tabs button small { display: inline; margin: 0; color: inherit; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; opacity: .72; }
-.tab-layout { gap: 18px; }
+.tab-layout { gap: 18px; align-items: stretch; }
 .panel, .workspace-panel { border-color: var(--line); border-radius: 16px; box-shadow: 0 16px 38px #29313d0d; }
 .input-panel { padding: clamp(20px, 3vw, 32px); }
-.result-panel { position: sticky; top: 20px; min-height: 0; padding: clamp(20px, 3vw, 28px); }
+.result-panel { position: sticky; top: 20px; min-height: 0; align-self: stretch; padding: clamp(20px, 3vw, 28px); }
 .section-heading { margin-bottom: 24px; }
 .section-heading h2 { font-size: clamp(24px, 2.4vw, 30px); }
 .section-heading p { font-size: 13px; }
@@ -376,7 +378,7 @@ body { background: #fafaf8; }
 @media (max-width: 640px) {
   .app-shell { padding: 18px 14px 28px; }
   .brand-logo { flex-basis: 44px; width: 44px; height: 44px; }
-  .brand-copy > span { display: none; }
+  .brand-copy { min-height: 44px; padding-left: 12px; }
   .tabs { width: calc(100% + 4px); margin-left: -2px; }
   .tabs button { padding: 0 12px; }
   .tabs button small { display: none; }
