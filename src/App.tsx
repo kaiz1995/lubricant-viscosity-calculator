@@ -470,7 +470,7 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
         {result ? (
           <>
             <div className="result-grid">
-              <ResultCard title="理论调和 KV40" value={formatNumber(result.viscosity)} unit="mm²/s" detail="单温度 Walther 型模型" />
+              <ResultCard title="理论调和 KV40" value={formatNumber(result.viscosity)} unit="mm²/s" detail="ASTM D7152 双对数模型" />
               <ResultCard title="成本" value={result.cost.costPerKg === null ? '—' : formatNumber(result.cost.costPerKg)} unit={result.cost.costPerKg === null ? undefined : '元/kg'} tone="green" detail={result.cost.costPerTon === null ? '价格数据不完整' : `${formatNumber(result.cost.costPerTon)} 元/吨`} />
             </div>
             <IsoBadge iso={result.iso} />
@@ -1089,9 +1089,9 @@ export default function App() {
       <header className="app-header">
         <img className="brand-logo" src={logo} alt="中科润美 LUBEMATER" />
         <div className="brand-copy"><p className="kicker">LUBEMATER · FORMULATION LAB</p><h1>润滑油配方计算器</h1><span>润滑油理论调和与配方优化</span></div>
-        <div className="header-meta"><span className="model-chip"><strong>KV40</strong> 理论调和</span><span className="version-chip">模型 v1.0</span></div>
+        <div className="header-meta"><span className="model-chip"><strong>KV40</strong> 理论调和</span><span className="version-chip">模型 v1.1</span></div>
       </header>
-      <details className="assumption-panel"><summary>计算假设与限制</summary><p>当前采用单温度 Walther 型粘度调和模型进行理论预测，结果供配方设计参考，实际粘度以实验检测为准。</p></details>
+      <details className="assumption-panel"><summary>计算假设与限制</summary><p>当前采用 ASTM D7152（Refutas）双对数调和粘度模型进行理论预测，即对组分粘度作 log10(log10(ν+0.8)) 变换后按比例加权平均。计算结果供配方设计参考，实际粘度以实验检测为准。</p></details>
       <main>
         <nav className="tabs" aria-label="计算模式">
           <button className={tab === 'forward' ? 'active' : ''} type="button" onClick={() => setTab('forward')}><strong>配比 → 粘度</strong><small>01</small></button>

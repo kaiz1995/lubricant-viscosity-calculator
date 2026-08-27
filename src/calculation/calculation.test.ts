@@ -33,11 +33,11 @@ function blendOf(viscosities: [number, number, number], fractions: [number, numb
 
 describe('SimplifiedWaltherModel', () => {
   it('uses a finite log1p transform at the lower representable domain point', () => {
-    const viscosity = 0.30000000000000004
+    const viscosity = 0.20000000000000004
     const transformed = model.transformViscosity(viscosity)
     expect(Number.isFinite(transformed)).toBe(true)
     close(model.inverseTransform(transformed), viscosity, 12)
-    expect(() => model.transformViscosity(0.3)).toThrow('大于0.3')
+    expect(() => model.transformViscosity(0.2)).toThrow('大于0.2')
   })
 
   it('round-trips ordinary viscosities and blends in transformed space', () => {
@@ -46,7 +46,7 @@ describe('SimplifiedWaltherModel', () => {
     expect(result).toBeGreaterThan(10)
     expect(result).toBeLessThan(100)
     expect(() => blendViscosity(model, [{ viscosity: 10, fraction: 0.5 }])).toThrow('之和')
-    expect(() => blendViscosity(model, [{ viscosity: 0.2, fraction: 1 }])).toThrow('大于0.3')
+    expect(() => blendViscosity(model, [{ viscosity: 0.1, fraction: 1 }])).toThrow('大于0.2')
   })
 
   it('keeps a single component and equal-viscosity blends unchanged', () => {

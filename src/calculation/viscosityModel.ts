@@ -4,15 +4,15 @@ import { assertFractions, assertViscosity, finiteResult } from './validation'
 export class SimplifiedWaltherModel implements ViscosityModel {
   readonly id = 'simplified-walther-single-temperature'
 
-  private static readonly MIN_VISCOSITY = 0.3
+  private static readonly MIN_VISCOSITY = 0.2
 
   validateDomain(viscosity: number): ValidationResult {
     return Number.isFinite(viscosity) && viscosity > SimplifiedWaltherModel.MIN_VISCOSITY
       ? { valid: true }
-      : { valid: false, message: '当前粘度模型要求运动粘度大于0.3 mm²/s。' }
+      : { valid: false, message: '当前粘度模型要求运动粘度大于0.2 mm²/s。' }
   }
 
-  // W(v) = log10(log10(v + 0.7)); written as log1p(v - 0.3) for stability.
+  // W(v) = log10(log10(v + 0.8)); written as log1p(v - 0.2) for stability.
   transformViscosity(viscosity: number): number {
     assertViscosity(this, viscosity, '运动粘度')
     // log1p 保留 v 接近模型下限时的有效精度。
