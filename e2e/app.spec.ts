@@ -18,6 +18,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => localStorage.clear())
   await page.reload()
   await expect(page.getByRole('heading', { name: '润滑油配方计算器' })).toBeVisible()
+  await page.getByRole('button', { name: '显示成本与类别' }).click()
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 

@@ -333,6 +333,7 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
   const [rows, setRows] = useState<ForwardRow[]>(() => initialRecipe?.mode === 'forward' ? forwardRowsFromRecipe(initialRecipe) : initialForwardRows)
   const [result, setResult] = useState<ForwardResult | null>(null)
   const [error, setError] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const totalFraction = rows.reduce((total, row) => {
     const value = Number(row.fraction)
@@ -346,7 +347,7 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
   }
 
   function addRow() {
-    setRows((current) => [...current, { name: `组分 ${current.length + 1}`, viscosity: '', fraction: '', price: '', category: 'OTHER' }])
+    setRows((current) => [...current, { name: '', viscosity: '', fraction: '', price: '', category: 'OTHER' }])
     setResult(null)
     setError('')
   }
@@ -399,17 +400,17 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
   return (
     <div className="tab-layout">
       <section className="panel input-panel">
-        <SectionHeading eyebrow="01 / FORWARD BLEND" title="配比 → 粘度" description="输入 1～N 个原料的 KV40 与质量分数，计算理论调和粘度和成本。" />
-        <div className="table-shell">
+        <SectionHeading eyebrow="01 · 配方输入" title="输入原料与比例" description="先完成计算必要字段；成本与类别按需展开。" />
+        <div className={`table-shell forward-table${showAdvanced ? ' advanced-open' : ''}`}>
           <table className="component-table">
             <thead>
               <tr>
                 <th scope="col">原料</th>
-                <th scope="col">类别</th>
+                <th scope="col" className="advanced-cell">类别</th>
                 <th scope="col">KV40 <small>mm²/s</small></th>
                 <th scope="col">质量分数</th>
-                <th scope="col">价格 <small>元/kg，可空</small></th>
-                <th scope="col">成本贡献</th>
+                <th scope="col" className="advanced-cell">价格 <small>元/kg，可空</small></th>
+                <th scope="col" className="advanced-cell">成本贡献</th>
                 <th scope="col" aria-label="操作" />
               </tr>
             </thead>
@@ -425,17 +426,17 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
                     <td data-label="原料">
                       <input className="name-input" value={row.name} onChange={(event) => updateRow(index, 'name', event.target.value)} placeholder={`如 原料 ${index + 1}`} aria-label={`第${index + 1}行原料名称`} />
                     </td>
-                    <td data-label="类别"><CategorySelect value={row.category} onChange={(value) => updateRow(index, 'category', value)} ariaLabel={`第${index + 1}行原料类别`} /></td>
+                    <td data-label="类别" className="advanced-cell"><CategorySelect value={row.category} onChange={(value) => updateRow(index, 'category', value)} ariaLabel={`第${index + 1}行原料类别`} /></td>
                     <td data-label="KV40">
                       <TextInput value={row.viscosity} onChange={(value) => updateRow(index, 'viscosity', value)} placeholder={`${[100, 46, 10][index] ?? 46}`} min={0.3000001} ariaLabel={`第${index + 1}行运动粘度`} />
                     </td>
                     <td data-label="质量分数">
                       <TextInput value={row.fraction} onChange={(value) => updateRow(index, 'fraction', value)} placeholder={`${[25, 50, 25][index] ?? 0}`} min={0} max={100} suffix="%" ariaLabel={`第${index + 1}行质量分数`} />
                     </td>
-                    <td data-label="价格">
+                    <td data-label="价格" className="advanced-cell">
                       <TextInput value={row.price} onChange={(value) => updateRow(index, 'price', value)} placeholder={`${[8.2, 5.6, 3.8][index] ?? '可空'}`} min={0} suffix="元/kg" ariaLabel={`第${index + 1}行价格`} />
                     </td>
-                    <td data-label="成本贡献" className="numeric-cell">{contribution === null ? '—' : `${formatNumber(contribution)} 元/kg`}</td>
+                    <td data-label="成本贡献" className="numeric-cell advanced-cell">{contribution === null ? '—' : `${formatNumber(contribution)} 元/kg`}</td>
                     <td data-label="操作" className="action-cell">
                       <button className="icon-button" type="button" onClick={() => removeRow(index)} disabled={rows.length <= 1} aria-label={`删除第${index + 1}行`}>×</button>
                     </td>
@@ -450,9 +451,10 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
           <strong>{formatNumber(totalFraction)}%</strong>
           <span className="fraction-status">{Math.abs(totalFraction - 100) < 0.000001 ? '已满足 100%' : '需要等于 100%'}</span>
         </div>
+        <button className="text-button advanced-toggle" type="button" onClick={() => setShowAdvanced((current) => !current)} aria-expanded={showAdvanced}>{showAdvanced ? '收起成本与类别' : '显示成本与类别'}</button>
         <div className="form-actions">
-          <button className="button secondary" type="button" onClick={addRow}>＋ 添加原料</button>
-          <button className="button primary" type="button" onClick={calculate}>计算调和粘度 <span>→</span></button>
+          <button className="button secondary" type="button" onClick={addRow}>添加原料</button>
+          <button className="button primary" type="button" onClick={calculate} aria-label="计算调和粘度">计算 KV40 <span>→</span></button>
         </div>
         {error && <Notice>{error}</Notice>}
       </section>
@@ -1086,15 +1088,15 @@ export default function App() {
     <div className="app-shell">
       <header className="app-header">
         <img className="brand-logo" src={logo} alt="中科润美 LUBEMATER" />
-        <div className="brand-copy"><p className="kicker">FORMULATION ENGINEERING / KV40</p><h1>润滑油配方计算器</h1></div>
-        <div className="header-meta"><span className="model-chip">MODEL <strong>SW-01</strong></span><span className="version-chip">PHASE 4</span></div>
+        <div className="brand-copy"><p className="kicker">LUBEMATER · FORMULATION LAB</p><h1>润滑油配方计算器</h1><span>润滑油理论调和与配方优化</span></div>
+        <div className="header-meta"><span className="model-chip"><strong>KV40</strong> 理论调和</span><span className="version-chip">模型 v1.0</span></div>
       </header>
-      <div className="frozen-notice"><span className="notice-mark">i</span><span>当前采用单温度 Walther 型粘度调和模型进行理论预测，结果供配方设计参考，实际粘度以实验检测为准。</span></div>
+      <details className="assumption-panel"><summary>计算假设与限制</summary><p>当前采用单温度 Walther 型粘度调和模型进行理论预测，结果供配方设计参考，实际粘度以实验检测为准。</p></details>
       <main>
         <nav className="tabs" aria-label="计算模式">
-          <button className={tab === 'forward' ? 'active' : ''} type="button" onClick={() => setTab('forward')}><span className="tab-number">01</span><span><strong>配比 → 粘度</strong><small>正向调和</small></span></button>
-          <button className={tab === 'reverse' ? 'active' : ''} type="button" onClick={() => setTab('reverse')}><span className="tab-number">02</span><span><strong>目标粘度 → 配比</strong><small>三组分解析反求</small></span></button>
-          <button className={tab === 'optimize' ? 'active' : ''} type="button" onClick={() => setTab('optimize')}><span className="tab-number">03</span><span><strong>最低成本优化</strong><small>三组分顶点枚举</small></span></button>
+          <button className={tab === 'forward' ? 'active' : ''} type="button" onClick={() => setTab('forward')}><strong>配比 → 粘度</strong><small>01</small></button>
+          <button className={tab === 'reverse' ? 'active' : ''} type="button" onClick={() => setTab('reverse')}><strong>目标粘度 → 配比</strong><small>02</small></button>
+          <button className={tab === 'optimize' ? 'active' : ''} type="button" onClick={() => setTab('optimize')}><strong>最低成本优化</strong><small>03</small></button>
         </nav>
         {tab === 'forward' && <ForwardTab key={`forward-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'forward' ? loadedRecipe : null} onSave={saveFromTab} />}
         {tab === 'reverse' && <ReverseTab key={`reverse-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'reverse' ? loadedRecipe : null} onSave={saveFromTab} />}
