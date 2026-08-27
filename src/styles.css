@@ -16,113 +16,6 @@
   --surface: #fff;
 }
 
-/* Open Design UI revision */
-:root {
-  --navy: #29313d;
-  --blue: #16806f;
-  --blue-soft: #e9f7f3;
-  --green: #16806f;
-  --green-soft: #e9f7f3;
-  --amber: #9a631d;
-  --amber-soft: #fff6e6;
-  --line: #dfe2e5;
-  --muted: #6e7781;
-  --surface: #ffffff;
-  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
-  color: var(--navy);
-  background: #fafaf8;
-}
-
-body { background: #fafaf8; }
-.app-shell { width: min(1440px, 100%); padding: 28px clamp(18px, 5vw, 72px) 36px; }
-.app-header { gap: 14px; padding-bottom: 18px; }
-.brand-logo { flex-basis: 52px; width: 52px; height: 52px; border-radius: 0; }
-.brand-copy h1, .section-heading h2, .result-heading h3, .workspace-heading h2, .workspace-heading h3 { font-family: "Noto Serif SC", "Source Han Serif SC", Georgia, serif; }
-.brand-copy h1 { font-size: clamp(25px, 3vw, 34px); letter-spacing: -.055em; }
-.brand-copy > span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
-.kicker, .eyebrow { color: var(--blue); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; letter-spacing: .12em; }
-.model-chip, .version-chip { border-color: var(--line); color: var(--muted); background: var(--surface); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: 600; letter-spacing: .04em; }
-.version-chip { color: var(--muted); background: var(--surface); }
-.assumption-panel { margin: 0 0 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
-.assumption-panel summary { min-height: 42px; padding: 12px 14px; color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 750; }
-.assumption-panel p { margin: 0; padding: 0 14px 14px; color: var(--muted); font-size: 12px; line-height: 1.65; }
-
-.tabs { display: flex; gap: 4px; width: max-content; max-width: 100%; margin-bottom: 18px; padding: 4px; overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
-.tabs button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 15px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; text-align: left; white-space: nowrap; box-shadow: none; }
-.tabs button:hover { border: 0; color: var(--navy); background: #f1f3f2; }
-.tabs button.active { border: 0; color: #fff; background: var(--blue); box-shadow: 0 4px 10px #16806f29; }
-.tabs button strong { font-size: 13px; }
-.tabs button small { display: inline; margin: 0; color: inherit; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; opacity: .72; }
-
-.tab-layout { gap: 18px; }
-.panel, .workspace-panel { border-color: var(--line); border-radius: 16px; box-shadow: 0 16px 38px #29313d0d; }
-.input-panel { padding: clamp(20px, 3vw, 32px); }
-.result-panel { position: sticky; top: 20px; min-height: 0; padding: clamp(20px, 3vw, 28px); }
-.section-heading { margin-bottom: 24px; }
-.section-heading h2 { font-size: clamp(24px, 2.4vw, 30px); }
-.section-heading p { font-size: 13px; }
-
-.forward-table { border-radius: 11px; }
-.forward-table .component-table th { background: #fbfbfa; }
-.forward-table:not(.advanced-open) .advanced-cell { display: none; }
-.forward-table:not(.advanced-open) .component-table { table-layout: auto; }
-.forward-table:not(.advanced-open) .component-table th:nth-child(1) { width: 42%; }
-.forward-table:not(.advanced-open) .component-table th:nth-child(3) { width: 27%; }
-.forward-table:not(.advanced-open) .component-table th:nth-child(4) { width: 27%; }
-.forward-table:not(.advanced-open) .component-table th:last-child { width: 32px; }
-.advanced-toggle { min-height: 38px; margin-top: 6px; padding: 0; border: 0; color: var(--blue); background: transparent; font-size: 12px; font-weight: 800; }
-.advanced-toggle:hover { text-decoration: underline; }
-.fraction-total { margin-top: 12px; background: transparent; border: 1px solid #ead9bc; }
-.fraction-total.valid { border-color: #b9dfd5; background: var(--green-soft); }
-.form-actions { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
-.button { min-height: 46px; border-radius: 9px; padding: 0 16px; font-size: 13px; }
-.button.primary { border-color: var(--blue); background: var(--blue); box-shadow: 0 8px 18px #16806f33; }
-.button.primary:hover { background: #126c5e; }
-.button.secondary { border-color: var(--line); color: var(--navy); }
-
-.result-heading { margin-bottom: 24px; }
-.result-heading h3 { font-size: 23px; }
-.result-grid { gap: 10px; }
-.result-grid .result-card:first-child { grid-column: 1 / -1; padding: 17px; background: #fff; }
-.result-grid .result-card:first-child .result-value { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: clamp(42px, 5vw, 58px); }
-.result-card { border-color: var(--line); background: #fbfbfa; }
-.result-card.green { border-color: #b9dfd5; background: var(--green-soft); }
-.iso-result { border-color: #b9dfd5; color: var(--green); background: var(--green-soft); }
-.result-details { margin-top: 14px; border-top: 1px solid var(--line); }
-.result-details summary { display: flex; align-items: center; min-height: 48px; color: var(--navy); cursor: pointer; font-size: 12px; font-weight: 800; list-style: none; }
-.result-details summary::-webkit-details-marker { display: none; }
-.result-details summary::after { margin-left: auto; color: var(--muted); content: '+'; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 18px; font-weight: 400; }
-.result-details[open] summary::after { content: '−'; }
-.result-details .category-summary { margin-top: 0; }
-.details-content { padding-bottom: 14px; color: var(--muted); font-size: 12px; line-height: 1.65; }
-.empty-result { min-height: 260px; border: 1px dashed var(--line); border-radius: 10px; }
-
-.workspace-panel { margin-top: 18px; padding: clamp(20px, 3vw, 30px); }
-.workspace-heading h2 { font-size: 25px; }
-.recipe-item { border-color: var(--line); border-radius: 10px; background: #fff; }
-.recipe-item.baseline { border-color: #b9dfd5; background: #f7fcfa; }
-.recipe-actions button, .baseline-button { border-color: var(--line); }
-.history-empty { border-color: var(--line); background: #fcfcfb; }
-
-@media (max-width: 950px) {
-  .result-panel { position: static; }
-}
-
-@media (max-width: 640px) {
-  .app-shell { padding: 18px 14px 28px; }
-  .brand-logo { flex-basis: 44px; width: 44px; height: 44px; }
-  .brand-copy > span { display: none; }
-  .tabs { width: calc(100% + 4px); margin-left: -2px; }
-  .tabs button { padding: 0 12px; }
-  .tabs button small { display: none; }
-  .input-panel, .result-panel { padding: 20px 14px; }
-  .forward-table:not(.advanced-open) .component-table td.advanced-cell { display: none; }
-  .advanced-toggle { width: 100%; text-align: left; }
-  .form-actions { flex-direction: column-reverse; }
-  .button { width: 100%; min-height: 48px; }
-  .result-grid .result-card:first-child .result-value { font-size: 46px; }
-}
-
 * { box-sizing: border-box; }
 html, body, #root { min-width: 0; min-height: 100%; margin: 0; }
 body { min-width: 320px; overflow-x: hidden; background: #f3f6fa; }
@@ -472,6 +365,13 @@ body { background: #fafaf8; }
 .recipe-item.baseline { border-color: #b9dfd5; background: #f7fcfa; }
 .recipe-actions button, .baseline-button { border-color: var(--line); }
 .history-empty { border-color: var(--line); background: #fcfcfb; }
+.result-details { margin-top: 14px; border-top: 1px solid var(--line); }
+.result-details summary { display: flex; align-items: center; min-height: 48px; color: var(--navy); cursor: pointer; font-size: 12px; font-weight: 800; list-style: none; }
+.result-details summary::-webkit-details-marker { display: none; }
+.result-details summary::after { margin-left: auto; color: var(--muted); content: '+'; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 18px; font-weight: 400; }
+.result-details[open] summary::after { content: '−'; }
+.result-details .category-summary { margin-top: 0; }
+.details-content { padding-bottom: 14px; color: var(--muted); font-size: 12px; line-height: 1.65; }
 @media (max-width: 950px) { .result-panel { position: static; } }
 @media (max-width: 640px) {
   .app-shell { padding: 18px 14px 28px; }
