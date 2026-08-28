@@ -280,6 +280,7 @@ function TextInput({
   step = 'any',
   suffix,
   ariaLabel,
+  className = '',
 }: {
   value: string
   onChange: (value: string) => void
@@ -289,9 +290,10 @@ function TextInput({
   step?: string
   suffix?: string
   ariaLabel?: string
+  className?: string
 }) {
   return (
-    <div className={`input-with-suffix${suffix ? ' has-suffix' : ''}`}>
+    <div className={`input-with-suffix${suffix ? ' has-suffix' : ''}${className ? ` ${className}` : ''}`}>
       <input
         type="number"
         value={value}
@@ -331,14 +333,24 @@ function Notice({ children, tone = 'error' }: { children: React.ReactNode; tone?
 
 function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; onSave: SaveRecipe }) {
   const [rows, setRows] = useState<ForwardRow[]>(() => initialRecipe?.mode === 'forward' ? forwardRowsFromRecipe(initialRecipe) : initialForwardRows)
+  const [autoFractionIndex, setAutoFractionIndex] = useState<number | null>(() => {
+    const count = initialRecipe?.mode === 'forward' ? initialRecipe.components.length : initialForwardRows.length
+    return count > 1 ? count - 1 : null
+  })
   const [result, setResult] = useState<ForwardResult | null>(null)
   const [error, setError] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  const totalFraction = rows.reduce((total, row) => {
+  const manualFractionTotal = rows.reduce((total, row, index) => {
+    if (index === autoFractionIndex) return total
     const value = Number(row.fraction)
     return total + (Number.isFinite(value) ? value : 0)
   }, 0)
+  const automaticFraction = autoFractionIndex === null || manualFractionTotal > 100
+    ? ''
+    : String(Number((100 - manualFractionTotal).toFixed(6)))
+  const fractionValues = rows.map((row, index) => index === autoFractionIndex ? automaticFraction : row.fraction)
+  const totalFraction = autoFractionIndex === null ? manualFractionTotal : manualFractionTotal > 100 ? manualFractionTotal : 100
 
   function updateRow(index: number, key: keyof ForwardRow, value: string) {
     setRows((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [key]: value } : row))
@@ -346,29 +358,44 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
     setError('')
   }
 
+  function updateFraction(index: number, value: string) {
+    setRows((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, fraction: value } : row))
+    if (index === autoFractionIndex && rows.length > 1) setAutoFractionIndex(index === rows.length - 1 ? rows.length - 2 : rows.length - 1)
+    setResult(null)
+    setError('')
+  }
+
   function addRow() {
     setRows((current) => [...current, { name: '', viscosity: '', fraction: '', price: '', category: 'OTHER' }])
+    setAutoFractionIndex((current) => current === null ? rows.length : current)
     setResult(null)
     setError('')
   }
 
   function removeRow(index: number) {
     if (rows.length <= 1) return
-    setRows((current) => current.filter((_, rowIndex) => rowIndex !== index))
+    setRows((current) => current.map((row, rowIndex) => rowIndex === autoFractionIndex ? { ...row, fraction: automaticFraction } : row).filter((_, rowIndex) => rowIndex !== index))
+    setAutoFractionIndex((current) => {
+      const nextLength = rows.length - 1
+      if (nextLength === 1) return null
+      if (current === index) return nextLength - 1
+      return current !== null && current > index ? current - 1 : current
+    })
     setResult(null)
     setError('')
   }
 
   function calculate() {
     try {
+      if (autoFractionIndex !== null && manualFractionTotal > 100) throw new Error('手动比例合计不能超过 100%。')
       const components = rows.map((row, index) => ({
         viscosity: parseValue(row.viscosity, `第${index + 1}行运动粘度`),
-        fraction: parseValue(row.fraction, `第${index + 1}行比例`) / 100,
+        fraction: parseValue(fractionValues[index], `第${index + 1}行比例`) / 100,
         pricePerKg: parseOptionalValue(row.price),
       }))
       const viscosity = blendViscosity(model, components)
       const cost = calculateCost(components)
-      setResult({ viscosity, iso: classifyIsoVG(viscosity), cost, rows: rows.map((row) => ({ ...row })) })
+      setResult({ viscosity, iso: classifyIsoVG(viscosity), cost, rows: rows.map((row, index) => ({ ...row, fraction: fractionValues[index] })) })
       setError('')
     } catch (calculationError) {
       setResult(null)
@@ -431,7 +458,7 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
                       <TextInput value={row.viscosity} onChange={(value) => updateRow(index, 'viscosity', value)} placeholder={`${[100, 46, 10][index] ?? 46}`} min={0.2000001} ariaLabel={`第${index + 1}行运动粘度`} />
                     </td>
                     <td data-label="质量分数">
-                      <TextInput value={row.fraction} onChange={(value) => updateRow(index, 'fraction', value)} placeholder={`${[25, 50, 25][index] ?? 0}`} min={0} max={100} suffix="%" ariaLabel={`第${index + 1}行质量分数`} />
+                      <TextInput value={fractionValues[index]} onChange={(value) => updateFraction(index, value)} placeholder={`${[25, 50, 25][index] ?? 0}`} min={0} max={100} suffix="%" ariaLabel={`第${index + 1}行质量分数`} className={index === autoFractionIndex ? 'auto-fraction' : ''} />
                     </td>
                     <td data-label="价格" className="advanced-cell">
                       <TextInput value={row.price} onChange={(value) => updateRow(index, 'price', value)} placeholder={`${[8.2, 5.6, 3.8][index] ?? '可空'}`} min={0} suffix="元/kg" ariaLabel={`第${index + 1}行价格`} />
@@ -449,7 +476,7 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
         <div className={`fraction-total ${Math.abs(totalFraction - 100) < 0.000001 ? 'valid' : ''}`}>
           <span>比例合计</span>
           <strong>{formatNumber(totalFraction)}%</strong>
-          <span className="fraction-status">{Math.abs(totalFraction - 100) < 0.000001 ? '已满足 100%' : '需要等于 100%'}</span>
+          <span className="fraction-status">{autoFractionIndex !== null ? manualFractionTotal > 100 ? '手动比例不能超过 100%' : `第${autoFractionIndex + 1}行自动补余量，点击输入可改` : Math.abs(totalFraction - 100) < 0.000001 ? '已满足 100%' : '需要等于 100%'}</span>
         </div>
         <button className="text-button advanced-toggle" type="button" onClick={() => setShowAdvanced((current) => !current)} aria-expanded={showAdvanced}>{showAdvanced ? '收起成本与类别' : '显示成本与类别'}</button>
         <div className="form-actions">

@@ -91,6 +91,7 @@ input:focus::placeholder { color: transparent; }
 .input-with-suffix { position: relative; min-width: 0; }
 .input-with-suffix.has-suffix input { padding-right: 48px; }
 .input-with-suffix.has-suffix > span { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); color: #96a3b3; font-size: 10px; pointer-events: none; white-space: nowrap; }
+.input-with-suffix.auto-fraction input { border-color: #9fd8cd; background: #effaf6; }
 .numeric-cell { color: #61738c !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .action-cell { padding-right: 8px !important; padding-left: 0 !important; text-align: center; }
 .icon-button { width: 24px; height: 24px; padding: 0; border: 0; border-radius: 5px; color: #9aa8b8; background: transparent; font-size: 20px; line-height: 1; }

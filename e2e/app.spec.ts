@@ -152,6 +152,19 @@ test('正算结果', async ({ page }) => {
   await expect(page.getByText('配方成本贡献')).toBeVisible()
 })
 
+test('质量分数自动补余量且可改', async ({ page }) => {
+  await input(page, '第1行质量分数').fill('40')
+  await input(page, '第2行质量分数').fill('35')
+  await expect(input(page, '第3行质量分数')).toHaveValue('25')
+  await input(page, '第3行质量分数').fill('30')
+  await expect(input(page, '第2行质量分数')).toHaveValue('30')
+
+  await page.reload()
+  await page.getByLabel('删除第3行').click()
+  await input(page, '第1行质量分数').fill('40')
+  await expect(input(page, '第2行质量分数')).toHaveValue('60')
+})
+
 test('反求成功', async ({ page }) => {
   await page.getByRole('button', { name: /目标粘度.*配比/ }).click()
   await expect(page.getByLabel('锁定组分')).toHaveValue('')
