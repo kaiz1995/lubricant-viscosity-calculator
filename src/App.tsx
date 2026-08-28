@@ -1120,7 +1120,7 @@ export default function App() {
     <div className="app-shell">
       <header className="app-header">
         <img className="brand-logo" src={logo} alt="中科润美 LUBEMATER" />
-        <div className="brand-copy"><p className="kicker">LUBEMATER · FORMULATION LAB</p><h1>润滑油配方计算器</h1></div>
+        <div className="brand-copy"><p className="kicker">LUBEMATER · FORMULATION LAB</p><h1>多组分粘度调和计算</h1></div>
         <div className="header-meta"><span className="model-chip"><strong>KV40</strong> 理论调和</span><span className="version-chip">模型 v1.1</span></div>
       </header>
       <details className="assumption-panel"><summary>计算假设与限制</summary><p>当前采用 ASTM D7152（Refutas）双对数调和粘度模型进行理论预测，即对组分粘度作 log10(log10(ν+0.8)) 变换后按比例加权平均。计算结果供配方设计参考，实际粘度以实验检测为准。</p></details>

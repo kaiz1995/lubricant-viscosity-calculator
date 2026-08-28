@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await page.evaluate(() => localStorage.clear())
   await page.reload()
-  await expect(page.getByRole('heading', { name: '润滑油配方计算器' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '多组分粘度调和计算' })).toBeVisible()
   const advancedToggle = page.getByRole('button', { name: '显示成本与类别' })
   await expect(advancedToggle).toHaveAttribute('aria-expanded', 'false')
   await advancedToggle.click()
@@ -455,7 +455,7 @@ test('重复ID默认创建导入副本', async ({ page }) => {
 test('损坏JSON导入不崩溃', async ({ page }) => {
   page.once('dialog', (dialog) => dialog.accept())
   await page.locator('input[type=file]').setInputFiles({ name: '损坏.json', mimeType: 'application/json', buffer: Buffer.from('{broken') })
-  await expect(page.getByRole('heading', { name: '润滑油配方计算器' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '多组分粘度调和计算' })).toBeVisible()
   await expect(page.getByText('0 个方案')).toBeVisible()
 })
 
