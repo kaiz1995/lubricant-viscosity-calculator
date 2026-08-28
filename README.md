@@ -1,6 +1,6 @@
 # 润滑油配方计算器
 
-> 中科润美 LUBEMATER · FORMULATION LAB — 润滑剂调和粘度理论计算
+> LUBEMATER · FORMULATION LAB — 润滑剂调和粘度理论计算
 
 单页配方计算器，用于估算润滑油调和后的 40℃ 运动粘度（KV40）、ISO VG 等级与配方成本。
 
