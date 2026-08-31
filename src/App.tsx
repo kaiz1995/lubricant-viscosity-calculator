@@ -931,12 +931,16 @@ function ViSection({ eyebrow, title, fieldA, fieldB, fieldAHint, fieldBHint, res
         <button className="button primary" type="button" onClick={calculate}>计算 <span>→</span></button>
         <button className="button secondary" type="button" onClick={clear}>清除</button>
       </div>
-      {error && <Notice>{error}</Notice>}
-      {result !== null && (
-        <div className="result-grid single-result">
-          <ResultCard title={resultLabel} value={formatNumber(result, resultDigits)} unit={resultUnit} />
-        </div>
-      )}
+      <div className="vi-result">
+        {error && <Notice>{error}</Notice>}
+        {result !== null ? (
+          <div className="result-grid single-result">
+            <ResultCard title={resultLabel} value={formatNumber(result, resultDigits)} unit={resultUnit} />
+          </div>
+        ) : (
+          !error && <div className="vi-result-empty">输入数值后点击"计算"查看结果</div>
+        )}
+      </div>
     </section>
   )
 }
@@ -1237,13 +1241,13 @@ export default function App() {
           <button className={tab === 'forward' ? 'active' : ''} type="button" onClick={() => setTab('forward')}><strong>配比 → 粘度</strong><small>01</small></button>
           <button className={tab === 'reverse' ? 'active' : ''} type="button" onClick={() => setTab('reverse')}><strong>目标粘度 → 配比</strong><small>02</small></button>
           <button className={tab === 'optimize' ? 'active' : ''} type="button" onClick={() => setTab('optimize')}><strong>最低成本优化</strong><small>03</small></button>
-          <button className={tab === 'vi' ? 'active' : ''} type="button" onClick={() => setTab('vi')}><strong>粘度指数</strong><small>04</small></button>
+          <button className={tab === 'vi' ? 'active' : ''} type="button" onClick={() => setTab('vi')}><strong>粘度指数计算</strong><small>04</small></button>
         </nav>
         {tab === 'forward' && <ForwardTab key={`forward-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'forward' ? loadedRecipe : null} onSave={saveFromTab} />}
         {tab === 'reverse' && <ReverseTab key={`reverse-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'reverse' ? loadedRecipe : null} onSave={saveFromTab} />}
         {tab === 'optimize' && <OptimizationTab key={`optimize-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'optimize' ? loadedRecipe : null} onSave={saveFromTab} />}
         {tab === 'vi' && <ViTab />}
-        <RecipeHistory recipes={recipes} unreadableCount={unreadableCount} selectedIds={selectedIds} baselineId={baselineId} comparison={comparison} onSelect={selectRecipe} onBaseline={setBaseline} onCompare={openComparison} onLoad={loadRecipe} onRename={renameStored} onDuplicate={duplicateStored} onDelete={deleteStored} onExport={downloadRecipe} onExportJson={downloadRecipeJson} onExportAllJson={() => downloadAllRecipesJson(recipes)} onImport={openImportPicker} />
+        {tab !== 'vi' && <RecipeHistory recipes={recipes} unreadableCount={unreadableCount} selectedIds={selectedIds} baselineId={baselineId} comparison={comparison} onSelect={selectRecipe} onBaseline={setBaseline} onCompare={openComparison} onLoad={loadRecipe} onRename={renameStored} onDuplicate={duplicateStored} onDelete={deleteStored} onExport={downloadRecipe} onExportJson={downloadRecipeJson} onExportAllJson={() => downloadAllRecipesJson(recipes)} onImport={openImportPicker} />}
         <input ref={importInputRef} type="file" accept=".json,application/json" onChange={readImportFile} hidden />
         {importPreview && <ImportPreview parsed={importPreview.parsed} fileName={importPreview.fileName} existingIds={recipes.map((recipe) => recipe.id)} strategy={importPreview.strategy} onStrategyChange={(strategy) => setImportPreview((current) => current ? { ...current, strategy } : current)} onCancel={() => setImportPreview(null)} onConfirm={confirmImport} />}
         {importReport && <Notice tone="success">{importReport}</Notice>}

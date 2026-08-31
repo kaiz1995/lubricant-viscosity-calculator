@@ -333,11 +333,13 @@ body { background: #fafaf8; }
 .tabs button strong { font-size: 13px; }
 .tabs button small { display: inline; margin: 0; color: inherit; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; opacity: .72; }
 .tab-layout { gap: 18px; align-items: stretch; }
-.vi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.vi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .vi-section { padding: clamp(20px, 3vw, 28px); }
 .vi-section-heading { margin-bottom: 18px; }
 .vi-section-heading h4 { margin: 4px 0 0; font-size: 16px; }
 .vi-fields { display: grid; gap: 12px; margin-bottom: 16px; }
+.vi-result { margin-top: 16px; min-height: 125px; }
+.vi-result-empty { display: flex; align-items: center; justify-content: center; min-height: 125px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 12px; }
 .panel, .workspace-panel { border-color: var(--line); border-radius: 16px; box-shadow: 0 16px 38px #29313d0d; }
 .input-panel { padding: clamp(20px, 3vw, 32px); }
 .result-panel { position: sticky; top: 20px; min-height: 0; align-self: stretch; padding: clamp(20px, 3vw, 28px); }
