@@ -8,6 +8,9 @@ import {
   optimizeBlend,
   reachableViscosityRange,
   reverseBlend,
+  viscosityIndex,
+  kv100FromVI,
+  kv40FromVI,
   type CostResult,
   type OptimizationResult,
   type ReverseBlendResult,
@@ -42,7 +45,7 @@ import './styles.css'
 
 const model = new SimplifiedWaltherModel()
 
-type Tab = 'forward' | 'reverse' | 'optimize'
+type Tab = 'forward' | 'reverse' | 'optimize' | 'vi'
 type TargetMode = 'exact' | 'range' | 'tolerance'
 
 interface ForwardRow {
@@ -877,6 +880,111 @@ function ReachableRange({ range }: { range: { minimumReachableViscosity: number;
   return <div className="reachable-range"><span className="range-icon">↔</span><div><span>当前约束下理论可达 KV40</span><strong>{formatNumber(range.minimumReachableViscosity)} ～ {formatNumber(range.maximumReachableViscosity)} <small>mm²/s</small></strong></div></div>
 }
 
+function ViSection({ eyebrow, title, fieldA, fieldB, fieldAHint, fieldBHint, resultLabel, resultUnit, resultDigits = 2, compute, placeholderA, placeholderB }: {
+  eyebrow: string
+  title: string
+  fieldA: string
+  fieldB: string
+  fieldAHint?: string
+  fieldBHint?: string
+  resultLabel: string
+  resultUnit?: string
+  resultDigits?: number
+  compute: (a: number, b: number) => number
+  placeholderA?: string
+  placeholderB?: string
+}) {
+  const [a, setA] = useState('')
+  const [b, setB] = useState('')
+  const [result, setResult] = useState<number | null>(null)
+  const [error, setError] = useState('')
+
+  function clear() {
+    setA('')
+    setB('')
+    setResult(null)
+    setError('')
+  }
+
+  function calculate() {
+    try {
+      setResult(compute(parseValue(a, fieldA), parseValue(b, fieldB)))
+      setError('')
+    } catch (calculationError) {
+      setResult(null)
+      setError(errorMessage(calculationError))
+    }
+  }
+
+  return (
+    <section className="panel vi-section">
+      <div className="vi-section-heading"><span className="eyebrow">{eyebrow}</span><h4>{title}</h4></div>
+      <div className="vi-fields">
+        <Field label={fieldA} hint={fieldAHint}>
+          <TextInput value={a} onChange={(value) => { setA(value); setResult(null); setError('') }} placeholder={placeholderA} ariaLabel={fieldA} />
+        </Field>
+        <Field label={fieldB} hint={fieldBHint}>
+          <TextInput value={b} onChange={(value) => { setB(value); setResult(null); setError('') }} placeholder={placeholderB} ariaLabel={fieldB} />
+        </Field>
+      </div>
+      <div className="form-actions">
+        <button className="button primary" type="button" onClick={calculate}>计算 <span>→</span></button>
+        <button className="button secondary" type="button" onClick={clear}>清除</button>
+      </div>
+      {error && <Notice>{error}</Notice>}
+      {result !== null && (
+        <div className="result-grid single-result">
+          <ResultCard title={resultLabel} value={formatNumber(result, resultDigits)} unit={resultUnit} />
+        </div>
+      )}
+    </section>
+  )
+}
+
+function ViTab() {
+  return (
+    <div className="vi-grid">
+      <ViSection
+        eyebrow="A / VISCOSITY INDEX"
+        title="KV40 + KV100 → 粘度指数"
+        fieldA="KV40"
+        fieldB="KV100"
+        fieldAHint="mm²/s"
+        fieldBHint="mm²/s"
+        resultLabel="粘度指数 VI"
+        resultDigits={0}
+        compute={(a, b) => viscosityIndex(a, b)}
+        placeholderA="73.3"
+        placeholderB="8.86"
+      />
+      <ViSection
+        eyebrow="B / KV100 SOLVER"
+        title="VI + KV40 → KV100"
+        fieldA="粘度指数"
+        fieldB="KV40"
+        fieldBHint="mm²/s"
+        resultLabel="KV100"
+        resultUnit="mm²/s"
+        compute={(a, b) => kv100FromVI(a, b)}
+        placeholderA="128"
+        placeholderB="73.3"
+      />
+      <ViSection
+        eyebrow="C / KV40 SOLVER"
+        title="VI + KV100 → KV40"
+        fieldA="粘度指数"
+        fieldB="KV100"
+        fieldBHint="mm²/s"
+        resultLabel="KV40"
+        resultUnit="mm²/s"
+        compute={(a, b) => kv40FromVI(a, b)}
+        placeholderA="128"
+        placeholderB="8.86"
+      />
+    </div>
+  )
+}
+
 function modeLabel(mode: Recipe['mode']): string {
   return mode === 'forward' ? '配比→粘度' : mode === 'reverse' ? '目标粘度→配比' : '最低成本优化'
 }
@@ -1129,10 +1237,12 @@ export default function App() {
           <button className={tab === 'forward' ? 'active' : ''} type="button" onClick={() => setTab('forward')}><strong>配比 → 粘度</strong><small>01</small></button>
           <button className={tab === 'reverse' ? 'active' : ''} type="button" onClick={() => setTab('reverse')}><strong>目标粘度 → 配比</strong><small>02</small></button>
           <button className={tab === 'optimize' ? 'active' : ''} type="button" onClick={() => setTab('optimize')}><strong>最低成本优化</strong><small>03</small></button>
+          <button className={tab === 'vi' ? 'active' : ''} type="button" onClick={() => setTab('vi')}><strong>粘度指数</strong><small>04</small></button>
         </nav>
         {tab === 'forward' && <ForwardTab key={`forward-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'forward' ? loadedRecipe : null} onSave={saveFromTab} />}
         {tab === 'reverse' && <ReverseTab key={`reverse-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'reverse' ? loadedRecipe : null} onSave={saveFromTab} />}
         {tab === 'optimize' && <OptimizationTab key={`optimize-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'optimize' ? loadedRecipe : null} onSave={saveFromTab} />}
+        {tab === 'vi' && <ViTab />}
         <RecipeHistory recipes={recipes} unreadableCount={unreadableCount} selectedIds={selectedIds} baselineId={baselineId} comparison={comparison} onSelect={selectRecipe} onBaseline={setBaseline} onCompare={openComparison} onLoad={loadRecipe} onRename={renameStored} onDuplicate={duplicateStored} onDelete={deleteStored} onExport={downloadRecipe} onExportJson={downloadRecipeJson} onExportAllJson={() => downloadAllRecipesJson(recipes)} onImport={openImportPicker} />
         <input ref={importInputRef} type="file" accept=".json,application/json" onChange={readImportFile} hidden />
         {importPreview && <ImportPreview parsed={importPreview.parsed} fileName={importPreview.fileName} existingIds={recipes.map((recipe) => recipe.id)} strategy={importPreview.strategy} onStrategyChange={(strategy) => setImportPreview((current) => current ? { ...current, strategy } : current)} onCancel={() => setImportPreview(null)} onConfirm={confirmImport} />}

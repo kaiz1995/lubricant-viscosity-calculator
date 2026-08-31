@@ -333,6 +333,11 @@ body { background: #fafaf8; }
 .tabs button strong { font-size: 13px; }
 .tabs button small { display: inline; margin: 0; color: inherit; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; opacity: .72; }
 .tab-layout { gap: 18px; align-items: stretch; }
+.vi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.vi-section { padding: clamp(20px, 3vw, 28px); }
+.vi-section-heading { margin-bottom: 18px; }
+.vi-section-heading h4 { margin: 4px 0 0; font-size: 16px; }
+.vi-fields { display: grid; gap: 12px; margin-bottom: 16px; }
 .panel, .workspace-panel { border-color: var(--line); border-radius: 16px; box-shadow: 0 16px 38px #29313d0d; }
 .input-panel { padding: clamp(20px, 3vw, 32px); }
 .result-panel { position: sticky; top: 20px; min-height: 0; align-self: stretch; padding: clamp(20px, 3vw, 28px); }
@@ -389,4 +394,8 @@ body { background: #fafaf8; }
   .form-actions { flex-direction: column-reverse; }
   .button { width: 100%; min-height: 48px; }
   .result-grid .result-card:first-child .result-value { font-size: 46px; }
+}
+
+@media (max-width: 950px) {
+  .vi-grid { grid-template-columns: 1fr; }
 }
