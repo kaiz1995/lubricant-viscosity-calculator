@@ -1243,10 +1243,10 @@ export default function App() {
           <button className={tab === 'optimize' ? 'active' : ''} type="button" onClick={() => setTab('optimize')}><strong>最低成本优化</strong><small>03</small></button>
           <button className={tab === 'vi' ? 'active' : ''} type="button" onClick={() => setTab('vi')}><strong>粘度指数计算</strong><small>04</small></button>
         </nav>
-        {tab === 'forward' && <ForwardTab key={`forward-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'forward' ? loadedRecipe : null} onSave={saveFromTab} />}
-        {tab === 'reverse' && <ReverseTab key={`reverse-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'reverse' ? loadedRecipe : null} onSave={saveFromTab} />}
-        {tab === 'optimize' && <OptimizationTab key={`optimize-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'optimize' ? loadedRecipe : null} onSave={saveFromTab} />}
-        {tab === 'vi' && <ViTab />}
+        <div style={{ display: tab === 'forward' ? undefined : 'none' }}><ForwardTab key={`forward-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'forward' ? loadedRecipe : null} onSave={saveFromTab} /></div>
+        <div style={{ display: tab === 'reverse' ? undefined : 'none' }}><ReverseTab key={`reverse-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'reverse' ? loadedRecipe : null} onSave={saveFromTab} /></div>
+        <div style={{ display: tab === 'optimize' ? undefined : 'none' }}><OptimizationTab key={`optimize-${loadNonce}`} initialRecipe={loadedRecipe?.mode === 'optimize' ? loadedRecipe : null} onSave={saveFromTab} /></div>
+        <div style={{ display: tab === 'vi' ? undefined : 'none' }}><ViTab /></div>
         {tab !== 'vi' && <RecipeHistory recipes={recipes} unreadableCount={unreadableCount} selectedIds={selectedIds} baselineId={baselineId} comparison={comparison} onSelect={selectRecipe} onBaseline={setBaseline} onCompare={openComparison} onLoad={loadRecipe} onRename={renameStored} onDuplicate={duplicateStored} onDelete={deleteStored} onExport={downloadRecipe} onExportJson={downloadRecipeJson} onExportAllJson={() => downloadAllRecipesJson(recipes)} onImport={openImportPicker} />}
         <input ref={importInputRef} type="file" accept=".json,application/json" onChange={readImportFile} hidden />
         {importPreview && <ImportPreview parsed={importPreview.parsed} fileName={importPreview.fileName} existingIds={recipes.map((recipe) => recipe.id)} strategy={importPreview.strategy} onStrategyChange={(strategy) => setImportPreview((current) => current ? { ...current, strategy } : current)} onCancel={() => setImportPreview(null)} onConfirm={confirmImport} />}
