@@ -40,24 +40,39 @@ export interface FractionRange {
 }
 
 export interface ReverseBlendInput {
-  viscosities: readonly [number, number, number]
+  /** 组分运动粘度，长度即组分数，至少 2 个。 */
+  viscosities: readonly number[]
   targetViscosity: number
-  lockedIndex: 0 | 1 | 2
-  lockedFraction: number
+  /** 与 viscosities 等长；null 表示该组分比例待反求，数值表示已锁定比例（0～1）。 */
+  lockedFractions: readonly (number | null)[]
+}
+
+/** 多解场景下某个待求组分的可行比例区间。 */
+export interface PendingFractionRange {
+  index: number
+  min: number
+  max: number
 }
 
 interface ReverseBlendBase {
-  feasibleLockedFractionRange: FractionRange | null
+  /** 待求组分的可行比例区间；仅在待求组分多于两个、可行域可枚举时给出。 */
+  pendingRanges: PendingFractionRange[] | null
+  /** 锁定比例固定后，剩余组分可调出的粘度范围。 */
+  reachableViscosityRange: FractionRange | null
 }
 
 export type ReverseBlendResult =
   | (ReverseBlendBase & {
       status: 'SUCCESS'
-      fractions: [number, number, number]
+      fractions: number[]
       blendViscosity: number
+      /** true 表示解唯一；false 表示存在无穷多组解，fractions 为规则化参考解。 */
+      unique: boolean
+      /** 解的性质说明，供界面直接展示。 */
+      note: string
     })
   | (ReverseBlendBase & {
-      status: 'NO_SOLUTION' | 'INFINITE_SOLUTIONS' | 'INVALID_INPUT'
+      status: 'NO_SOLUTION' | 'INVALID_INPUT'
       message: string
     })
 

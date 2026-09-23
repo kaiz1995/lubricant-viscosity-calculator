@@ -59,6 +59,7 @@ interface ForwardRow {
 interface ReverseRow {
   name: string
   viscosity: string
+  fraction: string
   category: OilCategory
 }
 
@@ -91,9 +92,9 @@ const initialForwardRows: ForwardRow[] = [
 ]
 
 const initialReverseRows: ReverseRow[] = [
-  { name: '', viscosity: '', category: 'OTHER' },
-  { name: '', viscosity: '', category: 'OTHER' },
-  { name: '', viscosity: '', category: 'OTHER' },
+  { name: '', viscosity: '', fraction: '', category: 'OTHER' },
+  { name: '', viscosity: '', fraction: '', category: 'OTHER' },
+  { name: '', viscosity: '', fraction: '', category: 'OTHER' },
 ]
 
 const initialOptimizationRows: OptimizationRow[] = [
@@ -125,11 +126,18 @@ function forwardRowsFromRecipe(recipe: Recipe): ForwardRow[] {
 }
 
 function reverseRowsFromRecipe(recipe: Recipe): ReverseRow[] {
-  return recipe.components.slice(0, 3).map((component, index) => ({
-    name: component.name || `组分 ${index + 1}`,
-    viscosity: String(component.viscosity),
-    category: normalizeCategory(component.category),
-  }))
+  const saved = recipe.lockedFractions ?? null
+  return recipe.components.map((component, index) => {
+    const locked = saved
+      ? saved[index] ?? null
+      : index === recipe.lockedIndex ? recipe.lockedFraction : null
+    return {
+      name: component.name || `组分 ${index + 1}`,
+      viscosity: String(component.viscosity),
+      fraction: locked === null || locked === undefined ? '' : String(locked * 100),
+      category: normalizeCategory(component.category),
+    }
+  })
 }
 
 function optimizationRowsFromRecipe(recipe: Recipe): OptimizationRow[] {
@@ -537,29 +545,48 @@ function ForwardTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
 function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; onSave: SaveRecipe }) {
   const [rows, setRows] = useState<ReverseRow[]>(() => initialRecipe?.mode === 'reverse' ? reverseRowsFromRecipe(initialRecipe) : initialReverseRows)
   const [target, setTarget] = useState(() => initialRecipe?.mode === 'reverse' ? inputNumber(initialRecipe.targetViscosity) : '')
-  const [lockedIndex, setLockedIndex] = useState<0 | 1 | 2 | ''>(() => {
-    const savedIndex = initialRecipe?.mode === 'reverse' ? initialRecipe.lockedIndex : null
-    return savedIndex === 0 || savedIndex === 1 || savedIndex === 2 ? savedIndex : ''
-  })
-  const [lockedFraction, setLockedFraction] = useState(() => initialRecipe?.mode === 'reverse' ? `${(initialRecipe.lockedFraction ?? 0.2) * 100}` : '')
   const [result, setResult] = useState<ReverseBlendResult | null>(null)
   const [error, setError] = useState('')
 
-  function updateRow(index: number, value: string) {
-    setRows((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, viscosity: value } : row))
+  const lockedTotal = rows.reduce((total, row) => {
+    if (row.fraction.trim() === '') return total
+    const value = Number(row.fraction)
+    return total + (Number.isFinite(value) ? value : 0)
+  }, 0)
+  const pendingCount = rows.filter((row) => row.fraction.trim() === '').length
+  const remainingTotal = 100 - lockedTotal
+
+  function updateRow(index: number, key: keyof ReverseRow, value: string) {
+    setRows((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [key]: value } : row))
+    setResult(null)
+    setError('')
+  }
+
+  function addRow() {
+    setRows((current) => [...current, { name: '', viscosity: '', fraction: '', category: 'OTHER' }])
+    setResult(null)
+    setError('')
+  }
+
+  function removeRow(index: number) {
+    if (rows.length <= 2) return
+    setRows((current) => current.filter((_, rowIndex) => rowIndex !== index))
     setResult(null)
     setError('')
   }
 
   function calculate() {
     try {
-      if (lockedIndex === '') throw new Error('请选择锁定组分。')
-      const viscosities = rows.map((row, index) => parseValue(row.viscosity, `第${index + 1}行运动粘度`)) as [number, number, number]
+      if (rows.length < 2) throw new Error('至少需要两个原料。')
+      if (lockedTotal > 100) throw new Error('已锁定比例合计不能超过 100%。')
+      const viscosities = rows.map((row, index) => parseValue(row.viscosity, `第${index + 1}行运动粘度`))
+      const lockedFractions = rows.map((row, index) =>
+        row.fraction.trim() === '' ? null : parseValue(row.fraction, `第${index + 1}行比例`) / 100,
+      )
       const reverseResult = reverseBlend(model, {
         viscosities,
         targetViscosity: parseValue(target, '目标粘度'),
-        lockedIndex,
-        lockedFraction: parseValue(lockedFraction, '锁定比例') / 100,
+        lockedFractions,
       })
       setResult(reverseResult)
       setError('')
@@ -570,7 +597,8 @@ function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
   }
 
   function saveCurrentResult() {
-    if (!result || result.status !== 'SUCCESS' || lockedIndex === '') return
+    if (!result || result.status !== 'SUCCESS') return
+    const firstLockedIndex = rows.findIndex((row) => row.fraction.trim() !== '')
     onSave(createRecipe({
       name: defaultRecipeName(),
       mode: 'reverse',
@@ -587,8 +615,9 @@ function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
       categoryConstraints: [],
       targetViscosity: Number(target),
       targetTolerance: null,
-      lockedIndex,
-      lockedFraction: Number(lockedFraction) / 100,
+      lockedIndex: firstLockedIndex === -1 ? null : firstLockedIndex,
+      lockedFraction: firstLockedIndex === -1 ? null : Number(rows[firstLockedIndex].fraction) / 100,
+      lockedFractions: rows.map((row) => row.fraction.trim() === '' ? null : Number(row.fraction) / 100),
       optimizationConstraints: null,
       blendViscosity: result.blendViscosity,
       costPerKg: null,
@@ -597,70 +626,114 @@ function ReverseTab({ initialRecipe, onSave }: { initialRecipe?: Recipe | null; 
     }))
   }
 
-  const lockedName = lockedIndex === '' ? '锁定组分' : rows[lockedIndex]?.name || `组分 ${lockedIndex + 1}`
+  const statusText = lockedTotal > 100
+    ? '锁定比例不能超过 100%'
+    : pendingCount === 0
+      ? '全部比例已给定，将校验调和粘度'
+      : `剩余 ${formatNumber(remainingTotal)}% 由 ${pendingCount} 个原料反求${pendingCount > 2 ? '（存在多解）' : ''}`
 
   return (
     <div className="tab-layout">
       <section className="panel input-panel">
-        <SectionHeading eyebrow="02 / REVERSE SOLVER" title="目标粘度 → 配比" description="固定一个组分及其比例，用解析解反求另外两个组分的比例。" />
-        <div className="locked-config">
+        <SectionHeading eyebrow="02 / REVERSE SOLVER" title="目标粘度 → 配比" description="填写目标 KV40 与各原料粘度；比例留空的原料由求解器反算。留空两个得到唯一解，留空更多则给出参考解与各原料可行区间。" />
+        <div className="reverse-target">
           <Field label="目标 KV40" hint="mm²/s">
-            <TextInput value={target} onChange={(value) => { setTarget(value); setResult(null) }} placeholder="46" min={0.2000001} ariaLabel="目标运动粘度" />
-          </Field>
-          <Field label="锁定组分">
-            <select value={lockedIndex} onChange={(event) => { setLockedIndex(event.target.value === '' ? '' : Number(event.target.value) as 0 | 1 | 2); setResult(null) }} aria-label="锁定组分">
-              <option value="" disabled>请选择锁定组分</option>
-              {rows.map((row, index) => <option value={index} key={index}>{row.name || `组分 ${index + 1}`}</option>)}
-            </select>
-          </Field>
-          <Field label="锁定比例" hint="wt%">
-            <TextInput value={lockedFraction} onChange={(value) => { setLockedFraction(value); setResult(null) }} placeholder="20" min={0} max={100} suffix="%" ariaLabel="锁定比例" />
+            <TextInput value={target} onChange={(value) => { setTarget(value); setResult(null); setError('') }} placeholder="46" min={0.2000001} ariaLabel="目标运动粘度" />
           </Field>
         </div>
-        <div className="table-shell compact-table">
+        <div className="table-shell reverse-table">
           <table className="component-table">
-            <thead><tr><th scope="col">组分</th><th scope="col">类别</th><th scope="col">KV40 <small>mm²/s</small></th><th scope="col">状态</th></tr></thead>
+            <thead>
+              <tr>
+                <th scope="col">原料</th>
+                <th scope="col">类别</th>
+                <th scope="col">KV40 <small>mm²/s</small></th>
+                <th scope="col">比例 <small>留空 = 反求</small></th>
+                <th scope="col" aria-label="操作" />
+              </tr>
+            </thead>
             <tbody>
               {rows.map((row, index) => (
                 <tr key={index}>
-                  <td data-label="组分"><input className="name-input" value={row.name} onChange={(event) => setRows((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} placeholder={`如 组分 ${String.fromCharCode(65 + index)}`} aria-label={`第${index + 1}行组分名称`} /></td>
-                  <td data-label="类别"><CategorySelect value={row.category} onChange={(value) => setRows((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, category: value } : item))} ariaLabel={`第${index + 1}行组分类别`} /></td>
-                  <td data-label="KV40"><TextInput value={row.viscosity} onChange={(value) => updateRow(index, value)} placeholder={`${[10, 50, 100][index]}`} min={0.2000001} ariaLabel={`第${index + 1}行运动粘度`} /></td>
-                  <td data-label="状态">{index === lockedIndex ? <span className="lock-chip">锁定 {lockedFraction || '—'}%</span> : <span className="muted">待反求</span>}</td>
+                  <td data-label="原料"><input className="name-input" value={row.name} onChange={(event) => updateRow(index, 'name', event.target.value)} placeholder={`如 原料 ${String.fromCharCode(65 + index)}`} aria-label={`第${index + 1}行组分名称`} /></td>
+                  <td data-label="类别"><CategorySelect value={row.category} onChange={(value) => updateRow(index, 'category', value)} ariaLabel={`第${index + 1}行组分类别`} /></td>
+                  <td data-label="KV40"><TextInput value={row.viscosity} onChange={(value) => updateRow(index, 'viscosity', value)} placeholder={`${[10, 50, 100][index] ?? 46}`} min={0.2000001} ariaLabel={`第${index + 1}行运动粘度`} /></td>
+                  <td data-label="比例"><TextInput value={row.fraction} onChange={(value) => updateRow(index, 'fraction', value)} placeholder="反求" min={0} max={100} suffix="%" ariaLabel={`第${index + 1}行比例`} className={row.fraction.trim() === '' ? 'auto-fraction' : ''} /></td>
+                  <td data-label="操作" className="action-cell"><button className="icon-button" type="button" onClick={() => removeRow(index)} disabled={rows.length <= 2} aria-label={`删除第${index + 1}行`}>×</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="form-actions"><button className="button primary" type="button" onClick={calculate}>解析反求配比 <span>→</span></button></div>
+        <div className={`fraction-total ${lockedTotal <= 100 ? 'valid' : ''}`}>
+          <span>锁定合计</span>
+          <strong>{formatNumber(lockedTotal)}%</strong>
+          <span className="fraction-status">{statusText}</span>
+        </div>
+        <div className="form-actions">
+          <button className="button secondary" type="button" onClick={addRow}>添加原料</button>
+          <button className="button primary" type="button" onClick={calculate} aria-label="反求配比">反求配比 <span>→</span></button>
+        </div>
         {error && <Notice>{error}</Notice>}
       </section>
       <section className="panel result-panel">
         <div className="result-heading"><div><span className="eyebrow">OUTPUT / SOLUTION</span><h3>反求状态</h3></div><span className="result-state">{result?.status ?? 'WAITING'}</span></div>
-        {result ? <ReverseResult result={result} rows={rows} lockedName={lockedName} onSave={saveCurrentResult} /> : <div className="empty-result"><div className="empty-icon">↔</div><h4>等待解析</h4><p>反求仅支持三个组分。输入目标和锁定条件后开始计算。</p></div>}
+        {result ? <ReverseResult result={result} rows={rows} onSave={saveCurrentResult} /> : <div className="empty-result"><div className="empty-icon">↔</div><h4>等待反求</h4><p>至少输入两个原料粘度与目标 KV40。比例留空的原料会被反算。</p></div>}
       </section>
     </div>
   )
 }
 
-function ReverseResult({ result, rows, lockedName, onSave }: { result: ReverseBlendResult; rows: ReverseRow[]; lockedName: string; onSave: () => void }) {
-  const resultMessage = 'message' in result ? result.message : `已锁定 ${lockedName}，其余比例由解析解得到。`
+function ReverseResult({ result, rows, onSave }: { result: ReverseBlendResult; rows: ReverseRow[]; onSave: () => void }) {
+  const pendingCount = rows.filter((row) => row.fraction.trim() === '').length
+  const reachable = result.reachableViscosityRange
   return (
     <div className="solution-result">
-      <div className={`solution-banner ${result.status === 'SUCCESS' ? 'success' : result.status === 'INFINITE_SOLUTIONS' ? 'info' : 'warning'}`}>
+      <div className={`solution-banner ${result.status === 'SUCCESS' ? 'success' : 'warning'}`}>
         <span className="status-dot" />
-        <div><strong>{result.status === 'SUCCESS' ? '找到可行配方' : result.status === 'INFINITE_SOLUTIONS' ? '存在无穷多组解' : result.status === 'NO_SOLUTION' ? '当前条件无解' : '输入无效'}</strong><p>{resultMessage}</p></div>
+        <div>
+          <strong>{result.status === 'SUCCESS' ? result.unique ? '找到唯一配比' : '找到参考配比' : result.status === 'NO_SOLUTION' ? '当前条件无解' : '输入无效'}</strong>
+          <p>{result.status === 'SUCCESS' ? result.note : result.message}</p>
+        </div>
       </div>
-      {result.feasibleLockedFractionRange && (
-        <Notice tone="info">固定比例可行区间：<strong>{formatPercent(result.feasibleLockedFractionRange.min)} ～ {formatPercent(result.feasibleLockedFractionRange.max)}</strong>。该区间由当前三种原料粘度决定。</Notice>
+      {result.status !== 'SUCCESS' && reachable && (
+        <ReachableRange range={{ minimumReachableViscosity: reachable.min, maximumReachableViscosity: reachable.max }} />
       )}
       {result.status === 'SUCCESS' && (
         <>
-          <div className="result-grid single-result"><ResultCard title="反求后调和 KV40" value={formatNumber(result.blendViscosity)} unit="mm²/s" /><ResultCard title="结果" value="可行" tone="green" detail="三组分比例合计 100%" /></div>
+          <div className="result-grid single-result">
+            <ResultCard title="反求后调和 KV40" value={formatNumber(result.blendViscosity)} unit="mm²/s" />
+            <ResultCard title="解的性质" value={result.unique ? '唯一' : '多解'} tone={result.unique ? 'green' : 'amber'} detail={result.unique ? '待求组分两个，解析解唯一' : `待求 ${pendingCount} 个组分，按规则给出参考解`} />
+          </div>
           <div className="iso-wrap"><IsoBadge iso={classifyIsoVG(result.blendViscosity)} /></div>
           <CategorySummary components={rows.map((row, index) => ({ category: row.category, fraction: result.fractions[index] }))} />
           <div className="result-actions"><button className="button secondary" type="button" onClick={onSave}>保存方案</button></div>
-          <div className="breakdown"><div className="subheading"><h4>反求比例</h4><span>内部按 0～1 计算</span></div><div className="breakdown-list">{result.fractions.map((fraction, index) => <div className="breakdown-row" key={index}><span className="row-index">{String(index + 1).padStart(2, '0')}</span><span className="breakdown-name">{rows[index].name || `组分 ${index + 1}`}</span><span>{index === 0 ? 'A' : index === 1 ? 'B' : 'C'}</span><strong>{formatPercent(fraction)}</strong></div>)}</div></div>
+          <div className="breakdown">
+            <div className="subheading"><h4>反求配比</h4><span>合计 100%</span></div>
+            <div className="breakdown-list">
+              {result.fractions.map((fraction, index) => (
+                <div className="breakdown-row" key={index}>
+                  <span className="row-index">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="breakdown-name">{rows[index].name || `组分 ${index + 1}`}</span>
+                  <span>{rows[index].fraction.trim() === '' ? '反求' : '锁定'}</span>
+                  <strong>{formatPercent(fraction)}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+          {result.pendingRanges && result.pendingRanges.length > 0 && (
+            <div className="pending-ranges">
+              <div className="subheading"><h4>待求组分可行区间</h4><span>锁定值不变时可取的比例范围</span></div>
+              <div className="pending-range-list">
+                {result.pendingRanges.map((range) => (
+                  <div className="pending-range-row" key={range.index}>
+                    <span>{rows[range.index].name || `组分 ${range.index + 1}`}</span>
+                    <strong>{formatPercent(range.min)} ～ {formatPercent(range.max)}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

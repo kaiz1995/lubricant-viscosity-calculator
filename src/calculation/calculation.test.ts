@@ -88,101 +88,99 @@ describe('reverseBlend', () => {
   const viscosities: [number, number, number] = [10, 50, 100]
   const fractions: [number, number, number] = [0.2, 0.3, 0.5]
   const target = blendOf(viscosities, fractions)
+  const blendValues = (values: readonly number[], shares: readonly number[]) =>
+    blendViscosity(model, values.map((viscosity, index) => ({ viscosity, fraction: shares[index] })))
 
-  it('closes the forward/reverse loop for each locked index', () => {
-    for (const lockedIndex of [0, 1, 2] as const) {
-      const result = reverseBlend(model, {
-        viscosities,
-        targetViscosity: target,
-        lockedIndex,
-        lockedFraction: fractions[lockedIndex],
-      })
+  it('closes the forward/reverse loop for every locked component', () => {
+    for (const lockedIndex of [0, 1, 2]) {
+      const lockedFractions: Array<number | null> = [null, null, null]
+      lockedFractions[lockedIndex] = fractions[lockedIndex]
+      const result = reverseBlend(model, { viscosities, targetViscosity: target, lockedFractions })
       expect(result.status).toBe('SUCCESS')
       if (result.status === 'SUCCESS') {
+        expect(result.unique).toBe(true)
         result.fractions.forEach((fraction, index) => close(fraction, fractions[index], 8))
         close(result.blendViscosity, target, 8)
       }
     }
   })
 
-  it('handles 0%, 100%, no solution, and infinite solutions', () => {
+  it('solves a two-component blend uniquely', () => {
+    const pairTarget = blendValues([10, 100], [0.35, 0.65])
+    const result = reverseBlend(model, { viscosities: [10, 100], targetViscosity: pairTarget, lockedFractions: [null, null] })
+    expect(result.status).toBe('SUCCESS')
+    if (result.status === 'SUCCESS') {
+      expect(result.unique).toBe(true)
+      close(result.fractions[0], 0.35, 8)
+      close(result.fractions[1], 0.65, 8)
+      close(result.blendViscosity, pairTarget, 8)
+    }
+  })
+
+  it('returns a reference solution with feasible ranges when underdetermined', () => {
+    const result = reverseBlend(model, { viscosities, targetViscosity: 46, lockedFractions: [null, null, null] })
+    expect(result.status).toBe('SUCCESS')
+    if (result.status === 'SUCCESS') {
+      expect(result.unique).toBe(false)
+      close(result.fractions.reduce((total, fraction) => total + fraction, 0), 1, 10)
+      expect(result.fractions.every((fraction) => fraction >= 0)).toBe(true)
+      close(result.blendViscosity, 46, 6)
+      expect(result.pendingRanges).toHaveLength(3)
+      result.pendingRanges?.forEach((range) => expect(range.min).toBeLessThanOrEqual(range.max))
+    }
+  })
+
+  it('keeps locked components fixed while solving the rest', () => {
+    const result = reverseBlend(model, { viscosities, targetViscosity: 46, lockedFractions: [null, 0.3, null] })
+    expect(result.status).toBe('SUCCESS')
+    if (result.status === 'SUCCESS') {
+      expect(result.unique).toBe(true)
+      close(result.fractions[1], 0.3, 10)
+      close(result.fractions.reduce((total, fraction) => total + fraction, 0), 1, 10)
+      close(result.blendViscosity, 46, 6)
+    }
+  })
+
+  it('handles 0%, 100%, no solution, and equivalent components', () => {
     const zero = reverseBlend(model, {
       viscosities,
       targetViscosity: blendOf(viscosities, [0, 0.5, 0.5]),
-      lockedIndex: 0,
-      lockedFraction: 0,
+      lockedFractions: [0, null, null],
     })
     expect(zero.status).toBe('SUCCESS')
 
-    const locked100 = reverseBlend(model, {
-      viscosities,
-      targetViscosity: viscosities[0],
-      lockedIndex: 0,
-      lockedFraction: 1,
-    })
+    const locked100 = reverseBlend(model, { viscosities, targetViscosity: viscosities[0], lockedFractions: [1, null, null] })
     expect(locked100.status).toBe('SUCCESS')
-    if (locked100.status === 'SUCCESS') expect(locked100.fractions).toEqual([1, 0, 0])
+    if (locked100.status === 'SUCCESS') close(locked100.fractions[0], 1, 10)
 
-    const locked100No = reverseBlend(model, {
-      viscosities,
-      targetViscosity: viscosities[1],
-      lockedIndex: 0,
-      lockedFraction: 1,
-    })
+    const locked100No = reverseBlend(model, { viscosities, targetViscosity: viscosities[1], lockedFractions: [1, null, null] })
     expect(locked100No.status).toBe('NO_SOLUTION')
 
     const equalOthers = reverseBlend(model, {
       viscosities: [10, 50, 50],
-      targetViscosity: blendOf([10, 50, 50], [0.2, 0.3, 0.5]),
-      lockedIndex: 0,
-      lockedFraction: 0.2,
+      targetViscosity: blendValues([10, 50, 50], [0.2, 0.3, 0.5]),
+      lockedFractions: [0.2, null, null],
     })
-    expect(equalOthers.status).toBe('INFINITE_SOLUTIONS')
+    expect(equalOthers.status).toBe('SUCCESS')
+    if (equalOthers.status === 'SUCCESS') expect(equalOthers.unique).toBe(false)
 
-    const equalOthersNo = reverseBlend(model, {
-      viscosities: [10, 50, 50],
-      targetViscosity: 80,
-      lockedIndex: 0,
-      lockedFraction: 0.2,
-    })
+    const equalOthersNo = reverseBlend(model, { viscosities: [10, 50, 50], targetViscosity: 80, lockedFractions: [0.2, null, null] })
     expect(equalOthersNo.status).toBe('NO_SOLUTION')
   })
 
-  it('returns the fixed-fraction feasible interval, including all four edge cases', () => {
-    const onlyZero = reverseBlend(model, {
-      viscosities: [100, 10, 10],
-      targetViscosity: 10,
-      lockedIndex: 0,
-      lockedFraction: 0,
-    })
-    expect(onlyZero.feasibleLockedFractionRange?.min).toBe(0)
-    expect(onlyZero.feasibleLockedFractionRange?.max).toBe(0)
+  it('reports the reachable range when the target is out of reach', () => {
+    const result = reverseBlend(model, { viscosities: [10, 100, 100], targetViscosity: 200, lockedFractions: [0.4, null, null] })
+    expect(result.status).toBe('NO_SOLUTION')
+    expect(result.reachableViscosityRange).not.toBeNull()
+    expect(result.reachableViscosityRange?.max).toBeLessThan(200)
+    expect(result.reachableViscosityRange?.min).toBeLessThanOrEqual(result.reachableViscosityRange?.max ?? 0)
+    expectFiniteTree(result)
+  })
 
-    const onlyOne = reverseBlend(model, {
-      viscosities: [10, 100, 100],
-      targetViscosity: 10,
-      lockedIndex: 0,
-      lockedFraction: 1,
-    })
-    expect(onlyOne.feasibleLockedFractionRange?.min).toBe(1)
-    expect(onlyOne.feasibleLockedFractionRange?.max).toBe(1)
-
-    const all = reverseBlend(model, {
-      viscosities: [10, 10, 10],
-      targetViscosity: 10,
-      lockedIndex: 0,
-      lockedFraction: 0.4,
-    })
-    expect(all.feasibleLockedFractionRange).toEqual({ min: 0, max: 1 })
-
-    const empty = reverseBlend(model, {
-      viscosities: [10, 100, 100],
-      targetViscosity: 200,
-      lockedIndex: 0,
-      lockedFraction: 0.4,
-    })
-    expect(empty.feasibleLockedFractionRange).toBeNull()
-    expectFiniteTree({ onlyZero, onlyOne, all, empty })
+  it('rejects invalid input', () => {
+    expect(reverseBlend(model, { viscosities: [46], targetViscosity: 46, lockedFractions: [null] }).status).toBe('INVALID_INPUT')
+    expect(reverseBlend(model, { viscosities: [10, 100], targetViscosity: 46, lockedFractions: [0.7, 0.7] }).status).toBe('INVALID_INPUT')
+    expect(reverseBlend(model, { viscosities: [10, 100], targetViscosity: 46, lockedFractions: [null] }).status).toBe('INVALID_INPUT')
   })
 })
 

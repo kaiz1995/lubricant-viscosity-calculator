@@ -48,8 +48,11 @@ export interface Recipe {
   categoryConstraints: CategoryConstraint[]
   targetViscosity: number | null
   targetTolerance: number | null
-  lockedIndex: 0 | 1 | 2 | null
+  /** 反求模式首个被锁定组分的下标；没有锁定组分时为 null。 */
+  lockedIndex: number | null
   lockedFraction: number | null
+  /** 反求模式逐组分的锁定比例，null 表示该组分比例由反求得到；长度与 components 一致。 */
+  lockedFractions?: Array<number | null> | null
   optimizationConstraints: OptimizationConstraintSnapshot | null
   blendViscosity: number
   costPerKg: number | null

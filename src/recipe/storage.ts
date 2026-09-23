@@ -126,6 +126,16 @@ function validMode(value: unknown): value is RecipeMode {
   return value === 'forward' || value === 'reverse' || value === 'optimize'
 }
 
+function validLockedFractions(value: unknown, componentCount: number): value is Array<number | null> {
+  if (!Array.isArray(value)) return false
+  if (value.length !== componentCount) return false
+  return value.every((item) => item === null || fraction(item))
+}
+
+function validLockedIndex(value: unknown, componentCount: number): boolean {
+  return value === null || (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < componentCount)
+}
+
 /** Returns false instead of throwing so one malformed local record cannot blank the app. */
 export function isValidRecipe(value: unknown): value is Recipe {
   if (!value || typeof value !== 'object') return false
@@ -134,17 +144,20 @@ export function isValidRecipe(value: unknown): value is Recipe {
   if (!validCategoryConstraints(item.categoryConstraints)) return false
   if (!validMode(item.mode) || !text(item.appVersion) || !validModel(item.viscosityModel)) return false
   if (!Array.isArray(item.components) || item.components.length < 1 || !item.components.every(validComponent)) return false
-  if ((item.mode === 'reverse' || item.mode === 'optimize') && item.components.length !== 3) return false
+  const componentCount = item.components.length
+  if (item.mode === 'optimize' && componentCount !== 3) return false
+  if (item.mode === 'reverse' && componentCount < 2) return false
   if (!(item.targetViscosity === null || (finite(item.targetViscosity) && item.targetViscosity > 0.3))) return false
   if (!(item.targetTolerance === null || nonNegativeFinite(item.targetTolerance))) return false
-  if (!(item.lockedIndex === null || item.lockedIndex === 0 || item.lockedIndex === 1 || item.lockedIndex === 2)) return false
+  if (!validLockedIndex(item.lockedIndex, componentCount)) return false
   if (!(item.lockedFraction === null || fraction(item.lockedFraction))) return false
+  if (item.lockedFractions !== undefined && item.lockedFractions !== null && !validLockedFractions(item.lockedFractions, componentCount)) return false
   if (!(item.optimizationConstraints === null || validOptimizationConstraints(item.optimizationConstraints))) return false
   if (!finite(item.blendViscosity) || item.blendViscosity <= 0.3) return false
   if (!(item.costPerKg === null || nonNegativeFinite(item.costPerKg))) return false
   if (!(item.costPerTon === null || nonNegativeFinite(item.costPerTon))) return false
   if (!validIsoVG(item.isoVG)) return false
-  if (item.mode === 'reverse' && (item.lockedIndex === null || item.lockedFraction === null || item.targetViscosity === null)) return false
+  if (item.mode === 'reverse' && item.targetViscosity === null) return false
   if (item.mode === 'optimize' && (item.optimizationConstraints === null || item.targetViscosity === null)) return false
   return true
 }
@@ -274,6 +287,7 @@ export function duplicateRecipe(recipe: Recipe, name = `${recipe.name}（副本�
     updatedAt: timestamp,
     components: recipe.components.map((component) => ({ ...component })),
     categoryConstraints: recipe.categoryConstraints.map((constraint) => ({ ...constraint })),
+    lockedFractions: recipe.lockedFractions ? [...recipe.lockedFractions] : recipe.lockedFractions ?? null,
     optimizationConstraints: recipe.optimizationConstraints
       ? {
           ...recipe.optimizationConstraints,

@@ -278,8 +278,6 @@ input:focus::placeholder { color: transparent; }
   .input-with-suffix.has-suffix > span { right: 6px; font-size: 9px; }
   .optimization-table .component-table tr { grid-template-columns: 1fr; }
   .optimization-table .component-table td { grid-template-columns: 84px minmax(0, 1fr); }
-  .compact-table .component-table tr { grid-template-columns: 1fr; }
-  .compact-table .component-table td { grid-template-columns: 70px minmax(0, 1fr); }
   .fraction-total { margin-top: 6px; }
   .form-actions { flex-direction: column-reverse; }
   .button { width: 100%; }
@@ -400,4 +398,21 @@ body { background: #fafaf8; }
 
 @media (max-width: 950px) {
   .vi-grid { grid-template-columns: 1fr; }
+}
+
+/* Reverse solver: dynamic component rows */
+.reverse-target { max-width: 240px; margin-bottom: 18px; }
+.reverse-table .component-table th:nth-child(1) { width: 29%; }
+.reverse-table .component-table th:nth-child(2) { width: 19%; }
+.reverse-table .component-table th:nth-child(3) { width: 21%; }
+.reverse-table .component-table th:nth-child(4) { width: 23%; }
+.pending-ranges { margin-top: 17px; }
+.pending-range-list { border-top: 1px solid var(--line); }
+.pending-range-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid #edf0f4; color: #687a91; font-size: 11px; }
+.pending-range-row strong { color: var(--navy); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .reverse-target { max-width: none; }
+  .reverse-table .component-table tr { grid-template-columns: 1fr; }
+  .reverse-table .component-table td { grid-template-columns: 78px minmax(0, 1fr); }
 }

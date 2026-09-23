@@ -13,6 +13,12 @@ function watchPage(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
+  // index.html 里的 Cloudflare Analytics 是 module script，离线或被墙时无法加载，
+  // 会一直阻塞 load 事件导致 goto/reload 超时。这里用空响应顶掉，保持测试可离线运行。
+  // 注册在 context 上，后续新建的页面同样生效。
+  await page.context().route(/cloudflareinsights\.com/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }),
+  )
   watchPage(page)
   await page.goto('/')
   await page.evaluate(() => localStorage.clear())
@@ -30,7 +36,8 @@ test.afterEach(async ({ page }) => {
 })
 
 function input(page: Page, name: string) {
-  return page.getByLabel(name, { exact: true })
+  // 非活动标签页用 display:none 隐藏，但 getByLabel 仍会匹配到其中的输入框，需限定在可见面板内。
+  return page.locator('.tab-layout:visible').getByLabel(name, { exact: true })
 }
 
 async function fillIfBlank(page: Page, name: string, value: string) {
@@ -49,10 +56,9 @@ async function fillForwardExample(page: Page) {
 
 async function fillReverseExample(page: Page) {
   const values = [
-    ['第1行运动粘度', '10'], ['第2行运动粘度', '50'], ['第3行运动粘度', '100'], ['锁定比例', '20'],
+    ['第1行运动粘度', '10'], ['第2行运动粘度', '50'], ['第3行运动粘度', '100'], ['第1行比例', '20'],
   ] as const
   for (const [name, value] of values) await fillIfBlank(page, name, value)
-  await page.getByLabel('锁定组分').selectOption('0')
 }
 
 async function fillOptimizationExample(page: Page) {
@@ -160,26 +166,63 @@ test('质量分数自动补余量且可改', async ({ page }) => {
   await expect(input(page, '第2行质量分数')).toHaveValue('30')
 
   await page.reload()
-  await page.getByLabel('删除第3行').click()
+  await page.locator('.forward-table').getByLabel('删除第3行').click()
   await input(page, '第1行质量分数').fill('40')
   await expect(input(page, '第2行质量分数')).toHaveValue('60')
 })
 
 test('反求成功', async ({ page }) => {
   await page.getByRole('button', { name: /目标粘度.*配比/ }).click()
-  await expect(page.getByLabel('锁定组分')).toHaveValue('')
+  await expect(input(page, '第1行比例')).toHaveValue('')
   await fillReverseExample(page)
   await input(page, '目标运动粘度').fill('46')
-  await page.getByRole('button', { name: /解析反求配比/ }).click()
-  await expect(page.getByText('找到可行配方')).toBeVisible()
+  await page.getByRole('button', { name: /反求配比/ }).click()
+  await expect(page.getByText('找到唯一配比')).toBeVisible()
   await expect(page.getByText('SUCCESS')).toBeVisible()
+})
+
+test('反求支持两个原料并允许增删', async ({ page }) => {
+  await page.getByRole('button', { name: /目标粘度.*配比/ }).click()
+  const reverseTable = page.locator('.reverse-table')
+  await reverseTable.getByLabel('删除第3行').click()
+  await expect(reverseTable.getByLabel('删除第2行')).toBeDisabled()
+  await input(page, '第1行运动粘度').fill('10')
+  await input(page, '第2行运动粘度').fill('100')
+  await input(page, '目标运动粘度').fill('46')
+  await page.getByRole('button', { name: /反求配比/ }).click()
+  await expect(page.getByText('找到唯一配比')).toBeVisible()
+
+  await page.getByRole('button', { name: '添加原料' }).click()
+  await input(page, '第3行运动粘度').fill('50')
+  await page.getByRole('button', { name: /反求配比/ }).click()
+  await expect(page.getByText('找到参考配比')).toBeVisible()
+  await expect(page.getByText('待求组分可行区间')).toBeVisible()
+})
+
+test('反求方案可保存并载入', async ({ page }) => {
+  await page.getByRole('button', { name: /目标粘度.*配比/ }).click()
+  await fillReverseExample(page)
+  await input(page, '目标运动粘度').fill('46')
+  await page.getByRole('button', { name: /反求配比/ }).click()
+  await expect(page.getByText('找到唯一配比')).toBeVisible()
+  page.once('dialog', (dialog) => dialog.accept('反求保存方案'))
+  await page.getByRole('button', { name: '保存方案' }).click()
+  const saved = page.locator('.recipe-item').filter({ hasText: '反求保存方案' })
+  await expect(saved).toBeVisible()
+
+  await page.getByRole('button', { name: /配比 → 粘度/ }).click()
+  await saved.getByRole('button', { name: '载入' }).click()
+  await expect(page.getByRole('button', { name: /反求配比/ })).toBeVisible()
+  await expect(input(page, '第1行比例')).toHaveValue('20')
+  await expect(input(page, '第1行运动粘度')).toHaveValue('10')
+  await expect(input(page, '第3行运动粘度')).toHaveValue('100')
 })
 
 test('反求不可达错误', async ({ page }) => {
   await page.getByRole('button', { name: /目标粘度.*配比/ }).click()
   await fillReverseExample(page)
   await input(page, '目标运动粘度').fill('100')
-  await page.getByRole('button', { name: /解析反求配比/ }).click()
+  await page.getByRole('button', { name: /反求配比/ }).click()
   await expect(page.getByText('当前条件无解')).toBeVisible()
   await expect(page.getByText('NO_SOLUTION')).toBeVisible()
 })
@@ -360,7 +403,7 @@ test('不可行类别约束显示明确诊断', async ({ page }) => {
   await input(page, '第1条类别约束类别').selectOption('PAO')
   await input(page, '第1条类别约束最低比例').fill('50')
   await page.getByRole('button', { name: /寻找最低成本方案/ }).click()
-  await expect(page.locator('.result-panel')).toContainText('CATEGORY_MIN_CONFLICT')
+  await expect(page.locator('.tab-layout:visible .result-panel')).toContainText('CATEGORY_MIN_CONFLICT')
 })
 
 test('类别粘度与原料上下限联合优化成功', async ({ page }) => {
